@@ -275,14 +275,14 @@ class TrianglePlot:
         label: str,
     ):
         """
-        Zeichnet einen Winkelbogen an Ecke p2 zwischen p1-p2 und p2-p3.
+        Zeichnet einen Innenwinkelbogen an Ecke p2 zwischen p1-p2 und p2-p3.
 
         Args:
             p1, p2, p3: Eckpunkte (p2 ist der Scheitelpunkt)
-            angle_deg: Winkel in Grad
+            angle_deg: Innenwinkel in Grad
             label: Beschriftung (z.B. 'α', 'β', 'γ')
         """
-        # Vektoren vom Scheitelpunkt
+        # Vektoren vom Scheitelpunkt AUSGEHEND (Richtung zu den Nachbarn)
         v1 = p1 - p2
         v2 = p3 - p2
 
@@ -290,29 +290,40 @@ class TrianglePlot:
         ang1 = math.atan2(v1[1], v1[0])
         ang2 = math.atan2(v2[1], v2[0])
 
-        # Sicherstellen, dass wir den inneren Winkel zeichnen (kürzerer Bogen)
+        # Differenz normalisieren auf [-pi, pi]
         diff = ang2 - ang1
         while diff <= -math.pi:
             diff += 2 * math.pi
         while diff > math.pi:
             diff -= 2 * math.pi
 
-        # Wenn diff negativ, Richtung umkehren
-        if diff < 0:
-            ang1, ang2 = ang2, ang1
+        # Der Innenwinkel ist |diff|. Der Bogen soll entlang des kürzeren Weges gehen.
+        # Wenn diff > 0: v2 ist links von v1 (gegen Uhrzeigersinn) -> Bogen von ang1 zu ang2
+        # Wenn diff < 0: v2 ist rechts von v1 (im Uhrzeigersinn) -> Bogen von ang2 zu ang1 (aber positiver Winkel)
+        
+        # Wir wollen den Bogen IMMER entlang des Innenwinkels zeichnen (kürzerer Weg)
+        if diff >= 0:
+            start_ang, end_ang = ang1, ang2
+        else:
+            start_ang, end_ang = ang2, ang1
 
         # Bogen radius (abhängig von Dreiecksgröße)
-        radius = min(np.linalg.norm(v1), np.linalg.norm(v2)) * 0.18
+        radius = min(np.linalg.norm(v1), np.linalg.norm(v2)) * 0.15
         radius = max(radius, 0.3)  # Mindestradius
 
-        # Bogen zeichnen
-        theta = np.linspace(ang1, ang2, 40)
+        # Bogen zeichnen (immer gegen Uhrzeigersinn vom start_ang zum end_ang entlang des Innenwinkels)
+        theta = np.linspace(start_ang, end_ang, 40)
         arc_x = p2[0] + radius * np.cos(theta)
         arc_y = p2[1] + radius * np.sin(theta)
         self.ax.plot(arc_x, arc_y, "r-", linewidth=2, zorder=4)
 
-        # Winkelbeschriftung
-        mid_angle = (ang1 + ang2) / 2
+        # Winkelbeschriftung in der Mitte des Bogens
+        mid_angle = (start_ang + end_ang) / 2
+        # Korrektur für wrap-around bei mid_angle
+        if end_ang < start_ang:
+            mid_angle = (start_ang + end_ang + 2*math.pi) / 2
+            if mid_angle > math.pi:
+                mid_angle -= 2*math.pi
         label_radius = radius * 1.6
         label_x = p2[0] + label_radius * math.cos(mid_angle)
         label_y = p2[1] + label_radius * math.sin(mid_angle)
@@ -478,7 +489,7 @@ class TrianglePlot:
     def _draw_height_divisions(
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray
     ):
-        """Zeichnet die Höhen-Teilungslinien von einer Dreiecksseite zur anderen."""
+        """Zeichnet die Höhen-Teilungslinien und misst die Einzelteile."""
         if not self.height_division_enabled:
             return
 
@@ -562,95 +573,175 @@ class TrianglePlot:
             (C, A, "b"),  # Seite b (CA)
         ]
 
-        for i, dist in enumerate(division_distances):
-            point_on_height = foot + height_dir * dist
+        # Alle Teilungspunkte auf der Höhe sammeln (inkl. Fußpunkt und Scheitelpunkt)
+        all_height_points = [foot] + [foot + height_dir * d for d in division_distances] + [vertex]
 
-            # Schneidepunkte mit Dreiecksseiten berechnen
-            # Die Linie geht durch point_on_height in Richtung perp_dir
-            # Parameterform: P = point_on_height + t * perp_dir
-            # Finde t für jede Dreiecksseite
+        # --- Einzelteile vermessen und zeichnen ---
+        for i in range(len(all_height_points) - 1):
+            p_start = all_height_points[i]
+            p_end = all_height_points[i + 1]
+
+            # Teilstück-Höhe
+            segment_height = np.linalg.norm(p_end - p_start)
+
+            # Schnittpunkte der Linien durch p_start und p_end (senkrecht zur Höhe) mit Dreiecksseiten
+            intersections_start = []
+            intersections_end = []
             
-            intersections = []
             for P1, P2, side_name in triangle_edges:
-                # Seitenvektor
                 edge_vec = P2 - P1
-                # Loese: point_on_height + t * perp_dir = P1 + s * edge_vec
-                # => t * perp_dir - s * edge_vec = P1 - point_on_height
-                A_mat = np.column_stack((perp_dir, -edge_vec))
-                b_vec = P1 - point_on_height
                 
+                # Für p_start
+                A_mat = np.column_stack((perp_dir, -edge_vec))
+                b_vec = P1 - p_start
                 try:
-                    # Loese 2x2 lineares Gleichungssystem
                     det = np.linalg.det(A_mat)
                     if abs(det) > 1e-10:
                         ts = np.linalg.solve(A_mat, b_vec)
                         t, s = ts[0], ts[1]
-                        # Prüfe ob Intersection auf der Seite liegt (s in [0,1])
                         if 0 <= s <= 1:
-                            intersection = point_on_height + t * perp_dir
-                            intersections.append(intersection)
+                            intersection = p_start + t * perp_dir
+                            intersections_start.append(intersection)
                 except np.linalg.LinAlgError:
-                    continue
-
-            # Wir brauchen genau 2 Intersections (eine pro Seite des Dreiecks)
-            if len(intersections) >= 2:
-                # Sortiere nach t-Wert (Entfernung vom point_on_height entlang der perpendicular)
-                # Aber wir wollen die beiden äußeren Punkte
-                # Berechne Distanzen vom point_on_height
-                dists = [np.linalg.norm(p - point_on_height) for p in intersections]
-                sorted_intersections = [p for _, p in sorted(zip(dists, intersections))]
+                    pass
                 
-                # Nimm die beiden äußeren (kleinste und größte t)
-                line_start = sorted_intersections[0]
-                line_end = sorted_intersections[-1]
+                # Für p_end
+                b_vec = P1 - p_end
+                try:
+                    det = np.linalg.det(A_mat)
+                    if abs(det) > 1e-10:
+                        ts = np.linalg.solve(A_mat, b_vec)
+                        t, s = ts[0], ts[1]
+                        if 0 <= s <= 1:
+                            intersection = p_end + t * perp_dir
+                            intersections_end.append(intersection)
+                except np.linalg.LinAlgError:
+                    pass
 
-                # Linienlänge berechnen
-                line_length = np.linalg.norm(line_end - line_start)
+            # Einzelteil zeichnen, wenn beide Linien zwei Schnittpunkte haben
+            if len(intersections_start) >= 2 and len(intersections_end) >= 2:
+                # Äußere Schnittpunkte sortieren
+                dists_start = [np.linalg.norm(p - p_start) for p in intersections_start]
+                sorted_start = [p for _, p in sorted(zip(dists_start, intersections_start))]
+                line_start_left = sorted_start[0]
+                line_start_right = sorted_start[-1]
 
-                # Linie zeichnen (von Dreiecksseite zu Dreiecksseite)
+                dists_end = [np.linalg.norm(p - p_end) for p in intersections_end]
+                sorted_end = [p for _, p in sorted(zip(dists_end, intersections_end))]
+                line_end_left = sorted_end[0]
+                line_end_right = sorted_end[-1]
+
+                # Einzelteil als Polygon zeichnen (gefüllt)
+                poly_points = np.array([line_start_left, line_start_right, line_end_right, line_end_left, line_start_left])
+                self.ax.fill(
+                    poly_points[:, 0], poly_points[:, 1],
+                    alpha=0.1, color="lightblue", zorder=2
+                )
                 self.ax.plot(
-                    [line_start[0], line_end[0]],
-                    [line_start[1], line_end[1]],
-                    "g-",
-                    linewidth=1.5,
-                    alpha=0.9,
-                    zorder=3,
+                    poly_points[:, 0], poly_points[:, 1],
+                    "b-", linewidth=1.5, alpha=0.8, zorder=3
                 )
 
-                # Länge der Teilungslinie beschriften (in der Mitte der Linie)
-                mid_point = (line_start + line_end) / 2
-                # Verschiebe Label leicht senkrecht zur Linie für bessere Lesbarkeit
-                line_vec = line_end - line_start
-                line_len = np.linalg.norm(line_vec)
-                if line_len > 1e-6:
-                    line_dir = line_vec / line_len
-                    perp_to_line = np.array([-line_dir[1], line_dir[0]])
-                    label_offset = perp_to_line * (max(
-                        np.linalg.norm(B - A), np.linalg.norm(C - B), np.linalg.norm(A - C)
-                    ) * 0.04)
-                    label_pos = mid_point + label_offset
-                else:
-                    label_pos = mid_point
+                # Einzelteil-Längen an den Kanten beschriften
+                # Kante 1: line_start_left -> line_start_right (oben/unten)
+                edge_len_1 = np.linalg.norm(line_start_right - line_start_left)
+                mid_1 = (line_start_left + line_start_right) / 2
+                edge_vec_1 = line_start_right - line_start_left
+                if edge_len_1 > 1e-6:
+                    perp_1 = np.array([-edge_vec_1[1], edge_vec_1[0]]) / edge_len_1
+                    label_pos_1 = mid_1 + perp_1 * max(np.linalg.norm(B-A), np.linalg.norm(C-B), np.linalg.norm(A-C)) * 0.03
+                    self.ax.text(
+                        label_pos_1[0], label_pos_1[1],
+                        f"{edge_len_1:.1f} cm", fontsize=8, ha="center", va="center",
+                        color="blue", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                    )
 
+                # Kante 2: line_start_right -> line_end_right (rechte Seite)
+                edge_len_2 = np.linalg.norm(line_end_right - line_start_right)
+                mid_2 = (line_start_right + line_end_right) / 2
+                edge_vec_2 = line_end_right - line_start_right
+                if edge_len_2 > 1e-6:
+                    perp_2 = np.array([-edge_vec_2[1], edge_vec_2[0]]) / edge_len_2
+                    label_pos_2 = mid_2 + perp_2 * max(np.linalg.norm(B-A), np.linalg.norm(C-B), np.linalg.norm(A-C)) * 0.03
+                    self.ax.text(
+                        label_pos_2[0], label_pos_2[1],
+                        f"{edge_len_2:.1f} cm", fontsize=8, ha="center", va="center",
+                        color="blue", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                    )
+
+                # Kante 3: line_end_right -> line_end_left (unten/oben)
+                edge_len_3 = np.linalg.norm(line_end_left - line_end_right)
+                mid_3 = (line_end_right + line_end_left) / 2
+                edge_vec_3 = line_end_left - line_end_right
+                if edge_len_3 > 1e-6:
+                    perp_3 = np.array([-edge_vec_3[1], edge_vec_3[0]]) / edge_len_3
+                    label_pos_3 = mid_3 + perp_3 * max(np.linalg.norm(B-A), np.linalg.norm(C-B), np.linalg.norm(A-C)) * 0.03
+                    self.ax.text(
+                        label_pos_3[0], label_pos_3[1],
+                        f"{edge_len_3:.1f} cm", fontsize=8, ha="center", va="center",
+                        color="blue", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                    )
+
+                # Kante 4: line_end_left -> line_start_left (linke Seite)
+                edge_len_4 = np.linalg.norm(line_start_left - line_end_left)
+                mid_4 = (line_end_left + line_start_left) / 2
+                edge_vec_4 = line_start_left - line_end_left
+                if edge_len_4 > 1e-6:
+                    perp_4 = np.array([-edge_vec_4[1], edge_vec_4[0]]) / edge_len_4
+                    label_pos_4 = mid_4 + perp_4 * max(np.linalg.norm(B-A), np.linalg.norm(C-B), np.linalg.norm(A-C)) * 0.03
+                    self.ax.text(
+                        label_pos_4[0], label_pos_4[1],
+                        f"{edge_len_4:.1f} cm", fontsize=8, ha="center", va="center",
+                        color="blue", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                    )
+
+                # Winkel des Einzelteils an den Ecken berechnen und anzeigen
+                # Ecke 1: line_start_left
+                angle_1 = self._calculate_corner_angle(line_end_left, line_start_left, line_start_right)
                 self.ax.text(
-                    label_pos[0],
-                    label_pos[1],
-                    f"{line_length:.1f} cm",
-                    fontsize=8,
-                    ha="center",
-                    va="center",
-                    color="darkgreen",
-                    fontweight="bold",
-                    zorder=5,
-                    bbox=dict(
-                        boxstyle="round,pad=0.15",
-                        facecolor="white",
-                        edgecolor="green",
-                        alpha=0.95,
-                    ),
+                    line_start_left[0], line_start_left[1],
+                    f"∠={angle_1:.1f}°", fontsize=7, ha="center", va="center",
+                    color="darkblue", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                )
+                # Ecke 2: line_start_right
+                angle_2 = self._calculate_corner_angle(line_start_left, line_start_right, line_end_right)
+                self.ax.text(
+                    line_start_right[0], line_start_right[1],
+                    f"∠={angle_2:.1f}°", fontsize=7, ha="center", va="center",
+                    color="darkblue", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                )
+                # Ecke 3: line_end_right
+                angle_3 = self._calculate_corner_angle(line_start_right, line_end_right, line_end_left)
+                self.ax.text(
+                    line_end_right[0], line_end_right[1],
+                    f"∠={angle_3:.1f}°", fontsize=7, ha="center", va="center",
+                    color="darkblue", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                )
+                # Ecke 4: line_end_left
+                angle_4 = self._calculate_corner_angle(line_end_right, line_end_left, line_start_left)
+                self.ax.text(
+                    line_end_left[0], line_end_left[1],
+                    f"∠={angle_4:.1f}°", fontsize=7, ha="center", va="center",
+                    color="darkblue", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
                 )
 
-            # Markierung auf der Höhe (kleiner Kreis)
+        # Höhen-Teilungspunkte auf der Höhe markieren und beschriften
+        height_vec = vertex - foot
+        height_dir = height_vec / height_len if height_len > 0 else np.array([0.0, 0.0])
+        perp_dir = np.array([-height_dir[1], height_dir[0]])
+
+        for i, dist in enumerate(division_distances):
+            point_on_height = foot + height_dir * dist
+
+            # Markierung auf der Höhe
             self.ax.plot(
                 point_on_height[0],
                 point_on_height[1],
@@ -709,6 +800,22 @@ class TrianglePlot:
                 boxstyle="round,pad=0.3", facecolor="lightgreen", edgecolor="green", alpha=0.8
             ),
         )
+
+    def _calculate_corner_angle(self, p_prev: np.ndarray, p_curr: np.ndarray, p_next: np.ndarray) -> float:
+        """Berechnet den Innenwinkel an p_curr zwischen p_prev-p_curr und p_curr-p_next."""
+        v1 = p_prev - p_curr
+        v2 = p_next - p_curr
+        
+        dot = np.dot(v1, v2)
+        norm1 = np.linalg.norm(v1)
+        norm2 = np.linalg.norm(v2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        
+        cos_angle = dot / (norm1 * norm2)
+        cos_angle = max(-1.0, min(1.0, cos_angle))
+        return math.degrees(math.acos(cos_angle))
 
     # --- Event Handler ---
 

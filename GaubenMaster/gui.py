@@ -231,7 +231,7 @@ class VisualizationPanel(ttk.LabelFrame):
         """Erstellt die UI."""
         # Toolbar
         toolbar = ttk.Frame(self)
-        toolbar.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        toolbar.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
 
         ttk.Label(
             toolbar,
@@ -244,12 +244,21 @@ class VisualizationPanel(ttk.LabelFrame):
             side=tk.RIGHT, padx=5
         )
 
-        # Höhen-Teilung Controls
+        # Container für die beiden nebeneinander stehenden Frames
+        controls_container = ttk.Frame(self)
+        controls_container.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
+        controls_container.columnconfigure(0, weight=1)
+        controls_container.columnconfigure(1, weight=1)
+
+        # Höhen-Teilung Controls (linke Hälfte)
         self._setup_height_division_controls()
+
+        # Einzelteile Controls (rechte Hälfte)
+        self._setup_einzelteile_controls()
 
         # Plot Frame
         plot_frame = ttk.Frame(self)
-        plot_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        plot_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
         plot_frame.columnconfigure(0, weight=1)
         plot_frame.rowconfigure(0, weight=1)
 
@@ -258,8 +267,8 @@ class VisualizationPanel(ttk.LabelFrame):
     def _setup_height_division_controls(self):
         """Erstellt die UI für die Höhen-Teilung."""
         # Haupt-Container
-        controls_frame = ttk.LabelFrame(self, text="Höhen-Teilung", padding="5")
-        controls_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        controls_frame = ttk.LabelFrame(controls_container, text="Höhen-Teilung", padding="5")
+        controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
         controls_frame.columnconfigure(1, weight=1)
 
         # Enable Checkbox
@@ -332,6 +341,52 @@ class VisualizationPanel(ttk.LabelFrame):
 
         # Initially disable controls
         self._update_controls_state()
+
+    def _setup_einzelteile_controls(self):
+        """Erstellt die UI für die Einzelteile-Einstellungen."""
+        # Haupt-Container
+        controls_frame = ttk.LabelFrame(self, text="Einzelteile", padding="5")
+        controls_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
+        controls_frame.columnconfigure(1, weight=1)
+
+        # Länge +
+        ttk.Label(controls_frame, text="Länge +:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.length_plus_var = tk.DoubleVar(value=0.0)
+        ttk.Spinbox(
+            controls_frame,
+            from_=0.0,
+            to=100.0,
+            increment=0.1,
+            textvariable=self.length_plus_var,
+            width=8,
+        ).grid(row=0, column=1, sticky=tk.W, pady=2)
+        ttk.Label(controls_frame, text="cm").grid(row=0, column=2, sticky=tk.W, padx=(2, 0), pady=2)
+
+        # Falz vorne
+        ttk.Label(controls_frame, text="Falz vorne:").grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.falz_vorne_var = tk.DoubleVar(value=0.0)
+        ttk.Spinbox(
+            controls_frame,
+            from_=0.0,
+            to=50.0,
+            increment=0.1,
+            textvariable=self.falz_vorne_var,
+            width=8,
+        ).grid(row=1, column=1, sticky=tk.W, pady=2)
+        ttk.Label(controls_frame, text="cm").grid(row=1, column=2, sticky=tk.W, padx=(2, 0), pady=2)
+
+        # Falz hinten
+        ttk.Label(controls_frame, text="Falz hinten:").grid(row=2, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.falz_hinten_var = tk.DoubleVar(value=0.0)
+        ttk.Spinbox(
+            controls_frame,
+            from_=0.0,
+            to=50.0,
+            increment=0.1,
+            textvariable=self.falz_hinten_var,
+            width=8,
+        ).grid(row=2, column=1, sticky=tk.W, pady=2)
+        ttk.Label(controls_frame, text="cm").grid(row=2, column=2, sticky=tk.W, padx=(2, 0), pady=2)
 
     def _on_height_div_toggle(self):
         """Handler für Enable-Checkbox."""
