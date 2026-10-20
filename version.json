@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "Neue Funktion: Höhen-Teilung mit parallelen Linien (Dropdown für ha/hb/hc, Radiobuttons für n-Teile oder fixe Länge in cm, parallele Linien im rechten Winkel zur Höhe)"
+  "changelog": "Fix: Winkel-Bezeichnung korrigiert (alpha bei A, beta bei B, gamma bei C). Drehgeschwindigkeit reduziert für kontrollierte Bedienung. Höhen-Teilung: Linien gehen von Dreiecksseite zu Dreiecksseite, Längen beschriftet."
 }

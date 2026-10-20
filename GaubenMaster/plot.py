@@ -150,9 +150,12 @@ class TrianglePlot:
 
         # Winkelbögen zeichnen
         alpha, beta, gamma = self.angles
-        self.draw_angle_arc(A, B, C, alpha, "α")
-        self.draw_angle_arc(B, C, A, beta, "β")
-        self.draw_angle_arc(C, A, B, gamma, "γ")
+        # alpha at A (between B-A and A-C)
+        self.draw_angle_arc(B, A, C, alpha, "α")
+        # beta at B (between A-B and B-C)
+        self.draw_angle_arc(A, B, C, beta, "β")
+        # gamma at C (between A-C and B-C)
+        self.draw_angle_arc(A, C, B, gamma, "γ")
 
         # Höhen-Teilung zeichnen
         self._draw_height_divisions(A, B, C)
@@ -475,7 +478,7 @@ class TrianglePlot:
     def _draw_height_divisions(
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray
     ):
-        """Zeichnet die Höhen-Teilungslinien."""
+        """Zeichnet die Höhen-Teilungslinien von einer Dreiecksseite zur anderen."""
         if not self.height_division_enabled:
             return
 
@@ -542,7 +545,7 @@ class TrianglePlot:
             ),
         )
 
-        # Teilungspunkte berechnen und zeichnen
+        # Teilungspunkte berechnen
         division_distances = self._calculate_division_points(foot, vertex, height_len)
 
         # Höhen-Vektor normieren
@@ -552,46 +555,135 @@ class TrianglePlot:
         # Perpendikuläre Richtung (90° links)
         perp_dir = np.array([-height_dir[1], height_dir[0]])
 
-        # Ausdehnung der Perpendikulären (für visuelle Linieneinzeichnung)
-        # Wir zeichnen von der Höhe weg, senkrecht zur Höhe
-        perp_length = max(
-            np.linalg.norm(B - A), np.linalg.norm(C - B), np.linalg.norm(A - C)
-        ) * 0.15
+        # Dreiecksseiten für Intersections
+        triangle_edges = [
+            (A, B, "c"),  # Seite c (AB)
+            (B, C, "a"),  # Seite a (BC)
+            (C, A, "b"),  # Seite b (CA)
+        ]
 
         for i, dist in enumerate(division_distances):
             point_on_height = foot + height_dir * dist
 
-            # Perpendikuläre Linie zeichnen (in beide Richtungen)
-            line_start = point_on_height - perp_dir * perp_length
-            line_end = point_on_height + perp_dir * perp_length
+            # Schneidepunkte mit Dreiecksseiten berechnen
+            # Die Linie geht durch point_on_height in Richtung perp_dir
+            # Parameterform: P = point_on_height + t * perp_dir
+            # Finde t für jede Dreiecksseite
+            
+            intersections = []
+            for P1, P2, side_name in triangle_edges:
+                # Seitenvektor
+                edge_vec = P2 - P1
+                # Loese: point_on_height + t * perp_dir = P1 + s * edge_vec
+                # => t * perp_dir - s * edge_vec = P1 - point_on_height
+                A_mat = np.column_stack((perp_dir, -edge_vec))
+                b_vec = P1 - point_on_height
+                
+                try:
+                    # Loese 2x2 lineares Gleichungssystem
+                    det = np.linalg.det(A_mat)
+                    if abs(det) > 1e-10:
+                        ts = np.linalg.solve(A_mat, b_vec)
+                        t, s = ts[0], ts[1]
+                        # Prüfe ob Intersection auf der Seite liegt (s in [0,1])
+                        if 0 <= s <= 1:
+                            intersection = point_on_height + t * perp_dir
+                            intersections.append(intersection)
+                except np.linalg.LinAlgError:
+                    continue
 
+            # Wir brauchen genau 2 Intersections (eine pro Seite des Dreiecks)
+            if len(intersections) >= 2:
+                # Sortiere nach t-Wert (Entfernung vom point_on_height entlang der perpendicular)
+                # Aber wir wollen die beiden äußeren Punkte
+                # Berechne Distanzen vom point_on_height
+                dists = [np.linalg.norm(p - point_on_height) for p in intersections]
+                sorted_intersections = [p for _, p in sorted(zip(dists, intersections))]
+                
+                # Nimm die beiden äußeren (kleinste und größte t)
+                line_start = sorted_intersections[0]
+                line_end = sorted_intersections[-1]
+
+                # Linienlänge berechnen
+                line_length = np.linalg.norm(line_end - line_start)
+
+                # Linie zeichnen (von Dreiecksseite zu Dreiecksseite)
+                self.ax.plot(
+                    [line_start[0], line_end[0]],
+                    [line_start[1], line_end[1]],
+                    "g-",
+                    linewidth=1.5,
+                    alpha=0.9,
+                    zorder=3,
+                )
+
+                # Länge der Teilungslinie beschriften (in der Mitte der Linie)
+                mid_point = (line_start + line_end) / 2
+                # Verschiebe Label leicht senkrecht zur Linie für bessere Lesbarkeit
+                line_vec = line_end - line_start
+                line_len = np.linalg.norm(line_vec)
+                if line_len > 1e-6:
+                    line_dir = line_vec / line_len
+                    perp_to_line = np.array([-line_dir[1], line_dir[0]])
+                    label_offset = perp_to_line * (max(
+                        np.linalg.norm(B - A), np.linalg.norm(C - B), np.linalg.norm(A - C)
+                    ) * 0.04)
+                    label_pos = mid_point + label_offset
+                else:
+                    label_pos = mid_point
+
+                self.ax.text(
+                    label_pos[0],
+                    label_pos[1],
+                    f"{line_length:.1f} cm",
+                    fontsize=8,
+                    ha="center",
+                    va="center",
+                    color="darkgreen",
+                    fontweight="bold",
+                    zorder=5,
+                    bbox=dict(
+                        boxstyle="round,pad=0.15",
+                        facecolor="white",
+                        edgecolor="green",
+                        alpha=0.95,
+                    ),
+                )
+
+            # Markierung auf der Höhe (kleiner Kreis)
             self.ax.plot(
-                [line_start[0], line_end[0]],
-                [line_start[1], line_end[1]],
-                "g-",
-                linewidth=1,
-                alpha=0.8,
-                zorder=3,
+                point_on_height[0],
+                point_on_height[1],
+                "go",
+                markersize=5,
+                markerfacecolor="green",
+                markeredgecolor="darkgreen",
+                markeredgewidth=1,
+                zorder=4,
             )
 
-            # Beschriftung der Teilung
-            label_pos = point_on_height + perp_dir * perp_length * 1.1
+            # Beschriftung auf der Höhe (Abstand vom Fußpunkt)
+            label_on_height = point_on_height + perp_dir * (
+                max(
+                    np.linalg.norm(B - A), np.linalg.norm(C - B), np.linalg.norm(A - C)
+                ) * 0.05
+            )
             if self.height_division_mode == "equal_parts":
                 label = f"{i+1}/{self.height_division_n_parts}"
             else:
                 label = f"{dist:.1f} cm"
             self.ax.text(
-                label_pos[0],
-                label_pos[1],
+                label_on_height[0],
+                label_on_height[1],
                 label,
-                fontsize=8,
+                fontsize=7,
                 ha="center",
                 va="center",
                 color="darkgreen",
                 fontweight="bold",
                 zorder=5,
                 bbox=dict(
-                    boxstyle="round,pad=0.15",
+                    boxstyle="round,pad=0.1",
                     facecolor="white",
                     edgecolor="green",
                     alpha=0.9,
@@ -647,8 +739,8 @@ class TrianglePlot:
 
             # Winkeländerung basierend auf horizontaler Mausbewegung
             dx = event.xdata - self.last_mouse_pos[0]
-            # Empfindlichkeit: 100 Grad pro Einheit
-            self.rotation_angle += dx * 100
+            # Empfindlichkeit: 15 Grad pro Einheit (reduziert für kontrolliertes Drehen)
+            self.rotation_angle += dx * 15
             self.rotation_angle %= 360
             self.draw_triangle()
             self.last_mouse_pos = (event.xdata, event.ydata)
