@@ -1,6 +1,6 @@
 """
-GUI-Modul für Triangle Calculator
-==================================
+GUI-Modul für GaubenMaster
+==========================
 
 Enthält alle Tkinter-basierten GUI-Komponenten.
 """
@@ -175,8 +175,8 @@ class InputPanel(ttk.LabelFrame):
     def update_version_label(self):
         """Aktualisiert Versionsanzeige."""
         self.version_label.config(text=f"Version: {self.update_manager.current_version}")
-
-
+    
+    
 class VisualizationPanel(ttk.LabelFrame):
     """Visualisierungs-Panel mit Matplotlib Canvas."""
     
@@ -228,8 +228,8 @@ class VisualizationPanel(ttk.LabelFrame):
         """Setzt Plot-State."""
         if self.triangle_plot:
             self.triangle_plot.set_state(state)
-
-
+    
+    
 class StatusBar(ttk.Frame):
     """Statusleiste am unteren Fensterrand."""
     
@@ -244,8 +244,8 @@ class StatusBar(ttk.Frame):
     def set_status(self, message: str):
         """Setzt Status-Text."""
         self.status_var.set(message)
-
-
+    
+    
 class MenuBar(tk.Menu):
     """Hauptmenü der Anwendung."""
     
@@ -282,8 +282,8 @@ class MenuBar(tk.Menu):
         self.add_cascade(label="Hilfe", menu=help_menu)
         help_menu.add_command(label="Über", command=self.callbacks.get('about', lambda: None))
         help_menu.add_command(label="Hilfe", command=self.callbacks.get('help', lambda: None))
-
-
+    
+    
 class SettingsDialog(tk.Toplevel):
     """Einstellungen-Dialog."""
     
@@ -350,14 +350,14 @@ class SettingsDialog(tk.Toplevel):
         x = self.master.winfo_x() + (self.master.winfo_width() - self.winfo_width()) // 2
         y = self.master.winfo_y() + (self.master.winfo_height() - self.winfo_height()) // 2
         self.geometry(f"+{x}+{y}")
-
-
+    
+    
 class AboutDialog(tk.Toplevel):
     """Über-Dialog."""
     
     def __init__(self, parent, version: str):
         super().__init__(parent)
-        self.title("Über Triangle Calculator")
+        self.title("Über GaubenMaster")
         self.geometry("400x350")
         self.transient(parent)
         self.grab_set()
@@ -373,19 +373,19 @@ class AboutDialog(tk.Toplevel):
         
         # Icon/Title
         ttk.Label(main_frame, text="📐", font=('Arial', 48)).pack(pady=(0, 10))
-        ttk.Label(main_frame, text="Triangle Calculator", 
+        ttk.Label(main_frame, text="GaubenMaster", 
                  font=('Arial', 16, 'bold')).pack()
         ttk.Label(main_frame, text=f"Version {version}", 
                  font=('Arial', 10), foreground='gray').pack(pady=(0, 20))
         
         # Beschreibung
         desc = ("Eine Anwendung zur Berechnung und Visualisierung\n"
-                "von Dreiecken basierend auf drei Seitenlängen.\n\n"
+                "von Dreiecken für den Gaubenbau basierend auf drei Seitenlängen.\n\n"
                 "Features:\n"
                 "• Berechnung aller Winkel, Fläche, Umfang, Höhen\n"
                 "• Interaktive grafische Darstellung\n"
                 "• Maus-Drehung und Zoom\n"
-                "• Automatische Update-Funktion")
+                "• Silent Auto-Update via GitHub Releases")
         ttk.Label(main_frame, text=desc, justify=tk.CENTER).pack(pady=10)
         
         # Tech Stack
@@ -400,8 +400,8 @@ class AboutDialog(tk.Toplevel):
         x = self.master.winfo_x() + (self.master.winfo_width() - self.winfo_width()) // 2
         y = self.master.winfo_y() + (self.master.winfo_height() - self.winfo_height()) // 2
         self.geometry(f"+{x}+{y}")
-
-
+    
+    
 class HelpDialog(tk.Toplevel):
     """Hilfe-Dialog."""
     
@@ -446,92 +446,101 @@ class HelpDialog(tk.Toplevel):
             row=1, column=0, pady=10)
     
     def _get_help_text(self) -> str:
-        """Gibt den Hilfe-Text zurück."""
-        return """Triangle Calculator - Hilfe
-
-═══════════════════════════════════════════════════════════
-EINGABE
-═══════════════════════════════════════════════════════════
-• Geben Sie die drei Seitenlängen a, b, c in Zentimetern ein
-• Drücken Sie Enter oder klicken Sie auf "Berechnen"
-• Das Programm prüft automatisch die Dreiecksungleichung
-
-DREIECKSUNGLEICHUNG (muss erfüllt sein):
-  a + b > c
-  a + c > b
-  b + c > a
-
-Bei ungültigen Werten erscheint eine Fehlermeldung.
-
-═══════════════════════════════════════════════════════════
-BERECHNETE WERTE
-═══════════════════════════════════════════════════════════
-• Winkel α, β, γ (in Grad) - via Kosinussatz
-• Fläche (in cm²) - via Heronscher Formel
-• Umfang (in cm)
-• Höhen ha, hb, hc (in cm)
-
-═══════════════════════════════════════════════════════════
-VISUALISIERUNG BEDIENEN
-═══════════════════════════════════════════════════════════
-┌─────────────────────┬────────────────────────────────────┐
-│ Aktion              │ Wirkung                            │
-├─────────────────────┼────────────────────────────────────┤
-│ Linke Maustaste +   │ Dreieck drehen (Rotation)          │
-│ Ziehen              │                                    │
-│ Mausrad             │ Hinein/Herauszoomen                │
-│ "Ansicht            │ Setzt Rotation und Zoom zurück     │
-│  zurücksetzen"      │                                    │
-└─────────────────────┴────────────────────────────────────┘
-
-═══════════════════════════════════════════════════════════
-UPDATE-FUNKTION
-═══════════════════════════════════════════════════════════
-• Automatische Prüfung beim Start (einstellbar)
-• Manuelle Prüfung: Extras → Nach Updates suchen
-• Repository öffnen: Extras → Repository öffnen
-• Einstellungen: Extras → Einstellungen
-
-═══════════════════════════════════════════════════════════
-TASTATURKÜRZEL
-═══════════════════════════════════════════════════════════
-• Strg+N    : Neue Berechnung (Zurücksetzen)
-• Enter     : Berechnen (wenn Eingabefeld fokussiert)
-• Alt+F4    : Beenden
-
-═══════════════════════════════════════════════════════════
-MATHEMATISCHE GRUNDLAGEN
-═══════════════════════════════════════════════════════════
-Kosinussatz (Winkel):
-  cos(α) = (b² + c² - a²) / (2bc)
-  cos(β) = (a² + c² - b²) / (2ac)
-  cos(γ) = (a² + b² - c²) / (2ab)
-
-Heronsche Formel (Fläche):
-  s = (a + b + c) / 2
-  A = √(s(s-a)(s-b)(s-c))
-
-Höhen:
-  ha = 2A / a
-  hb = 2A / b
-  hc = 2A / c
-
-═══════════════════════════════════════════════════════════
-BEISPIELE
-═══════════════════════════════════════════════════════════
-• 3-4-5 Dreieck: a=3, b=4, c=5 (Rechtwinklig, γ=90°)
-• Gleichseitig: a=5, b=5, c=5 (Alle Winkel 60°)
-• Gleichschenklig: a=5, b=5, c=8
-• 5-12-13: a=5, b=12, c=13 (Rechtwinklig)
-"""
+            """Gibt den Hilfe-Text zurück."""
+            lines = [
+                "GaubenMaster - Hilfe",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "EINGABE",
+                "═══════════════════════════════════════════════════════════",
+                "• Geben Sie die drei Seitenlängen a, b, c in Zentimetern ein",
+                "• Drücken Sie Enter oder klicken Sie auf \"Berechnen\"",
+                "• Das Programm prüft automatisch die Dreiecksungleichung",
+                "",
+                "DREIECKSUNGLEICHUNG (muss erfüllt sein):",
+                "  a + b > c",
+                "  a + c > b",
+                "  b + c > a",
+                "",
+                "Bei ungültigen Werten erscheint eine Fehlermeldung.",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "BERECHNETE WERTE",
+                "═══════════════════════════════════════════════════════════",
+                "• Winkel α, β, γ (in Grad) - via Kosinussatz",
+                "• Fläche (in cm²) - via Heronscher Formel",
+                "• Umfang (in cm)",
+                "• Höhen ha, hb, hc (in cm)",
+                "• Inkreisradius & Umkreisradius",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "VISUALISIERUNG BEDIENEN",
+                "═══════════════════════════════════════════════════════════",
+                "┌─────────────────────┬────────────────────────────────────┐",
+                "│ Aktion              │ Wirkung                            │",
+                "├─────────────────────┼────────────────────────────────────┤",
+                "│ Linke Maustaste +   │ Dreieck drehen (Rotation)          │",
+                "│ Ziehen              │                                    │",
+                "│ Mausrad             │ Hinein/Herauszoomen                │",
+                "│ \"Ansicht            │ Setzt Rotation und Zoom zurück     │",
+                "│  zurücksetzen\"      │                                    │",
+                "└─────────────────────┴────────────────────────────────────┘",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "SILENT UPDATE-FUNKTION",
+                "═══════════════════════════════════════════════════════════",
+                "• Automatische Prüfung beim Start (einstellbar)",
+                "• Update gefunden → Benachrichtigung unten rechts",
+                "• \"Jetzt installieren\" → Silent Install + Auto-Restart",
+                "• Manuelle Prüfung: Extras → Nach Updates suchen",
+                "• Repository öffnen: Extras → Repository öffnen",
+                "• Einstellungen: Extras → Einstellungen",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "TASTATURKÜRZEL",
+                "═══════════════════════════════════════════════════════════",
+                "• Strg+N    : Neue Berechnung (Zurücksetzen)",
+                "• Enter     : Berechnen (wenn Eingabefeld fokussiert)",
+                "• Alt+F4    : Beenden",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "MATHEMATISCHE GRUNDLAGEN",
+                "═══════════════════════════════════════════════════════════",
+                "Kosinussatz (Winkel):",
+                "  cos(α) = (b² + c² - a²) / (2bc)",
+                "  cos(β) = (a² + c² - b²) / (2ac)",
+                "  cos(γ) = (a² + b² - c²) / (2ab)",
+                "",
+                "Heronsche Formel (Fläche):",
+                "  s = (a + b + c) / 2",
+                "  A = √(s(s-a)(s-b)(s-c))",
+                "",
+                "Höhen:",
+                "  ha = 2A / a",
+                "  hb = 2A / b",
+                "  hc = 2A / c",
+                "",
+                "Inkreis- & Umkreisradius:",
+                "  r = A / s",
+                "  R = (a * b * c) / (4A)",
+                "",
+                "═══════════════════════════════════════════════════════════",
+                "BEISPIELE",
+                "══════════════════════════════════════════════════════════",
+                "• 3-4-5 Dreieck: a=3, b=4, c=5 (Rechtwinklig, γ=90°)",
+                "• Gleichseitig: a=5, b=5, c=5 (Alle Winkel 60°)",
+                "• Gleichschenklig: a=5, b=5, c=8",
+                "• 5-12-13: a=5, b=12, c=13 (Rechtwinklig)",
+            ]
+            return "\n".join(lines)
     
     def _center_window(self):
         self.update_idletasks()
         x = self.master.winfo_x() + (self.master.winfo_width() - self.winfo_width()) // 2
         y = self.master.winfo_y() + (self.master.winfo_height() - self.winfo_height()) // 2
         self.geometry(f"+{x}+{y}")
-
-
+    
+    
 class UpdateDialog(tk.Toplevel):
     """Update-Benachrichtigungs-Dialog."""
     

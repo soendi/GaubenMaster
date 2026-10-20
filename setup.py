@@ -16,18 +16,19 @@ with open('requirements.txt', 'r') as f:
     requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
 
 setup(
-    name="triangle-calculator",
+    name="gaubenmaster",
     version=VERSION,
-    author="Ihr Name",
-    author_email="ihre.email@example.com",
-    description="Dreiecksberechnung und -visualisierung mit 3 Seitenlängen",
+    author="soendi",
+    author_email="soendi@users.noreply.github.com",
+    description="Dreiecksberechnung und -visualisierung für Gaubenbau (3 Seitenlängen)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/IHR_USERNAME/TriangleCalculator",
+    url="https://github.com/soendi/GaubenMaster",
     project_urls={
-        "Bug Tracker": "https://github.com/IHR_USERNAME/TriangleCalculator/issues",
-        "Documentation": "https://github.com/IHR_USERNAME/TriangleCalculator#readme",
-        "Source Code": "https://github.com/IHR_USERNAME/TriangleCalculator",
+        "Bug Tracker": "https://github.com/soendi/GaubenMaster/issues",
+        "Documentation": "https://github.com/soendi/GaubenMaster#readme",
+        "Source Code": "https://github.com/soendi/GaubenMaster",
+        "Releases": "https://github.com/soendi/GaubenMaster/releases",
     },
     packages=find_packages(),
     classifiers=[
@@ -35,7 +36,9 @@ setup(
         "Intended Audience :: Education",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -58,10 +61,10 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "triangle-calculator=main:main",
+            "gaubenmaster=main:main",
         ],
         "gui_scripts": [
-            "triangle-calculator-gui=main:main",
+            "gaubenmaster-gui=main:main",
         ],
     },
     include_package_data=True,

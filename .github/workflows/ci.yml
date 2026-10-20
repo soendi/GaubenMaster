@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: GaubenMaster CI/CD Pipeline
 
 on:
   push:
@@ -7,6 +7,10 @@ on:
     branches: [main, master]
   release:
     types: [published]
+
+env:
+  PRODUCT_NAME: GaubenMaster
+  GITHUB_REPO: soendi/GaubenMaster
 
 jobs:
   test:
@@ -21,6 +25,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -45,11 +51,11 @@ jobs:
     
     - name: Type checking (mypy)
       run: |
-        mypy TriangleCalculator/ --ignore-missing-imports
+        mypy GaubenMaster/ --ignore-missing-imports
     
     - name: Run tests
       run: |
-        pytest tests/ -v --cov=TriangleCalculator --cov-report=xml --cov-report=term-missing
+        pytest tests/ -v --cov=GaubenMaster --cov-report=xml --cov-report=term-missing
     
     - name: Upload coverage
       uses: codecov/codecov-action@v4
@@ -115,8 +121,8 @@ jobs:
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
 
-  create-executable:
-    name: Create Windows Executable
+  build-windows:
+    name: Build Windows Installer & Portable
     needs: test
     runs-on: windows-latest
     if: github.event_name == 'release' && github.event.action == 'published'
@@ -124,11 +130,14 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
@@ -136,16 +145,88 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
     
-    - name: Build executable
+    - name: Extract version
+      id: version
       run: |
-        pyinstaller --onefile --windowed --name TriangleCalculator main.py
+        $content = Get-Content version.json -Raw | ConvertFrom-Json
+        echo "version=$($content.version)" >> $env:GITHUB_OUTPUT
     
-    - name: Upload executable
+    - name: Build portable executable with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --name "${{ env.PRODUCT_NAME }}" `
+          --add-data "version.json;." `
+          --add-data "LICENSE;." `
+          --icon "assets/icon.ico" `
+          main.py
+      shell: pwsh
+    
+    - name: Verify executable
+      run: |
+        .\dist\${{ env.PRODUCT_NAME }}.exe --version 2>&1 || echo "Version check skipped (GUI app)"
+      shell: pwsh
+    
+    - name: Install NSIS
+      uses: ashutoshvarma/setup-nsis@v1
+      with:
+        nsis-version: '3.09'
+    
+    - name: Build NSIS Installer
+      run: |
+        makensis /DPRODUCT_VERSION="${{ steps.version.outputs.version }}" installer.nsi
+      shell: cmd
+    
+    - name: Rename installer with version
+      run: |
+        $version = "${{ steps.version.outputs.version }}"
+        $installer = "GaubenMaster-Setup-$version.exe"
+        Move-Item "GaubenMaster-Setup-${{ steps.version.outputs.version }}.exe" $installer
+        echo "installer=$installer" >> $env:GITHUB_OUTPUT
+      id: installer
+      shell: pwsh
+    
+    - name: Upload Windows artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: TriangleCalculator-windows
-        path: dist/TriangleCalculator.exe
+        name: GaubenMaster-windows-${{ steps.version.outputs.version }}
+        path: |
+          dist/${{ env.PRODUCT_NAME }}.exe
+          ${{ steps.installer.outputs.installer }}
         retention-days: 30
+
+  create-release:
+    name: Create GitHub Release Assets
+    needs: [build-windows, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Download Windows artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: GaubenMaster-windows-${{ github.event.release.tag_name }}
+        path: release-assets/
+    
+    - name: Download PyPI package artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: release-assets/
+    
+    - name: List release assets
+      run: ls -la release-assets/
+    
+    - name: Upload assets to release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          release-assets/GaubenMaster-Setup-*.exe
+          release-assets/GaubenMaster.exe
+          release-assets/*.tar.gz
+          release-assets/*.whl
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     name: Build Docker Image
@@ -178,7 +259,7 @@ jobs:
         context: .
         push: true
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/triangle-calculator:${{ steps.version.outputs.version }}
-          ${{ secrets.DOCKERHUB_USERNAME }}/triangle-calculator:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/gaubenmaster:${{ steps.version.outputs.version }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/gaubenmaster:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max

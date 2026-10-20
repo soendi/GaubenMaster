@@ -1,14 +1,14 @@
-# Triangle Calculator 📐
+# GaubenMaster 📐
 
-Eine Python-Anwendung zur Berechnung und Visualisierung von Dreiecken basierend auf drei Seitenlängen (A, B, C).
+Eine Python-Anwendung zur Berechnung und Visualisierung von Dreiecken für den **Gaubenbau** basierend auf drei Seitenlängen (A, B, C).
 
 ## ✨ Features
 
 - **Eingabe**: Drei Seitenlängen in Zentimetern
-- **Berechnung**: Alle Winkel, Fläche, Umfang, Höhen
+- **Berechnung**: Alle Winkel, Fläche, Umfang, Höhen, In-/Umkreisradius
 - **Visualisierung**: Grafische Darstellung mit Maßen (Längen & Winkel)
 - **Interaktion**: Maus-Drehung (Drag) und Zoom (Mausrad)
-- **Updates**: Automatische Update-Prüfung mit Benachrichtigung
+- **Silent Updates**: Automatische Update-Prüfung beim Start, silent Installation
 - **Cross-Platform**: Läuft auf Windows, macOS, Linux
 
 ## 📸 Screenshot
@@ -32,16 +32,23 @@ Eine Python-Anwendung zur Berechnung und Visualisierung von Dreiecken basierend 
 
 ## 🚀 Installation
 
-### Voraussetzungen
-- Python 3.8 oder höher
-- pip (Python Package Manager)
+### Windows Installer (empfohlen)
+
+1. Gehe zu [Releases](https://github.com/soendi/GaubenMaster/releases)
+2. Lade `GaubenMaster-Setup-<version>.exe` herunter
+3. Führe die Datei aus und folge dem Installationsassistenten
+4. GaubenMaster ist über das Startmenü oder Desktop-Verknüpfung startbar
 
 ### Installation aus Quellcode
 
+**Voraussetzungen:**
+- Python 3.8 oder höher
+- pip (Python Package Manager)
+
 ```bash
 # Repository klonen
-git clone https://github.com/IHR_USERNAME/TriangleCalculator.git
-cd TriangleCalculator
+git clone https://github.com/soendi/GaubenMaster.git
+cd GaubenMaster
 
 # Virtuelle Umgebung erstellen (empfohlen)
 python -m venv venv
@@ -56,11 +63,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### Als ausführbare Datei (Windows)
+### Als Portable Version (Windows)
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name "TriangleCalculator" main.py
+pyinstaller --onefile --windowed --name "GaubenMaster" main.py
 # Die .exe befindet sich im dist/ Ordner
 ```
 
@@ -84,17 +91,28 @@ Bei ungültigen Werten wird eine Fehlermeldung angezeigt.
 |--------|---------|
 | Linke Maustaste + Ziehen | Dreieck drehen |
 | Mausrad | Hinein/Herauszoomen |
-| Button "Zurücksetzen" | Ansicht auf 0° Rotation zurücksetzen |
+| Button "Ansicht zurücksetzen" | Ansicht auf 0° Rotation zurücksetzen |
 
 ### Berechnete Werte
 - **Winkel** α, β, γ (in Grad)
 - **Fläche** (in cm²)
 - **Umfang** (in cm)
 - **Höhen** ha, hb, hc (in cm)
+- **Inkreisradius** & **Umkreisradius**
 
-## 🔄 Update-Funktion
+## 🔄 Silent Update-Funktion
 
-Die Anwendung prüft automatisch beim Start auf Updates (einstellbar in den Einstellungen).
+GaubenMaster prüft **automatisch beim Start** auf Updates (einstellbar in den Einstellungen).
+
+### Ablauf:
+1. **Beim Start**: Hintergrund-Prüfung auf GitHub Releases
+2. **Update gefunden**: Nicht-modale Benachrichtigung unten rechts
+3. **Klick auf "Jetzt installieren"**: 
+   - Installer wird heruntergeladen
+   - Silent Installation (/SILENT /NORESTART)
+   - Laufendes Programm wird geschlossen
+   - Installation läuft im Hintergrund
+   - Programm startet automatisch neu mit neuer Version
 
 ### Manuelle Update-Prüfung
 - Menü: **Extras** → **Nach Updates suchen**
@@ -108,25 +126,30 @@ Die Anwendung prüft automatisch beim Start auf Updates (einstellbar in den Eins
 
 Einstellungen über **Extras** → **Einstellungen**:
 - Automatische Update-Prüfung beim Start an/aus
+- Prüfintervall (Tage)
 - Repository-URL anpassen
 
 ## 📁 Projektstruktur
 
 ```
-TriangleCalculator/
-├── main.py              # Hauptanwendung
-├── requirements.txt     # Python-Abhängigkeiten
-├── version.json         # Versionsinformation
-├── README.md           # Diese Datei
-├── LICENSE             # MIT Lizenz
-├── setup.py            # Package-Setup
-├── .gitignore          # Git-Ignore-Regeln
-└── TriangleCalculator/
-    ├── __init__.py
-    ├── calculator.py   # Berechnungslogik
-    ├── plot.py         # Visualisierung
-    ├── update.py       # Update-Management
-    └── gui.py          # GUI-Komponenten
+GaubenMaster/
+├── main.py                 # Hauptanwendung
+├── requirements.txt        # Python-Abhängigkeiten
+├── version.json           # Versionsinformation
+├── README.md              # Diese Datei
+├── LICENSE                # MIT Lizenz
+├── setup.py               # Package-Setup
+├── .gitignore             # Git-Ignore-Regeln
+├── installer.nsi          # NSIS Installer Script
+├── .github/workflows/     # CI/CD Pipelines
+├── GaubenMaster/
+│   ├── __init__.py
+│   ├── calculator.py      # Berechnungslogik
+│   ├── plot.py            # Visualisierung
+│   ├── update.py          # Update-Management
+│   └── gui.py             # GUI-Komponenten
+└── tests/
+    └── test_calculator.py # Unit Tests
 ```
 
 ## 🧮 Mathematische Grundlagen
@@ -149,6 +172,12 @@ A = √(s(s-a)(s-b)(s-c))
 ha = 2A / a
 hb = 2A / b
 hc = 2A / c
+```
+
+### Inkreis- und Umkreisradius
+```
+r = A / s
+R = (a * b * c) / (4A)
 ```
 
 ## 🛠️ Entwicklung
@@ -180,10 +209,22 @@ python -m build
 twine upload dist/*
 ```
 
-### GitHub Release erstellen
+### GitHub Release erstellen (baut Installer automatisch)
 1. Tag erstellen: `git tag v1.0.0`
 2. Push: `git push origin v1.0.0`
-3. GitHub Actions erstellt automatisch Release
+3. GitHub Actions erstellt automatisch:
+   - Windows Installer (NSIS)
+   - Portable .exe
+   - Docker Image
+   - PyPI Package
+
+### Installer lokal bauen (Windows)
+```bash
+# NSIS installieren (https://nsis.sourceforge.io/Download)
+# Dann:
+makensis installer.nsi
+# Output: GaubenMaster-Setup-<version>.exe
+```
 
 ## 🤝 Mitwirken
 
@@ -199,15 +240,16 @@ Dieses Projekt steht unter der **MIT Lizenz** - siehe [LICENSE](LICENSE) für De
 
 ## 👨‍💻 Autor
 
-**Ihr Name**
-- GitHub: [@IHR_USERNAME](https://github.com/IHR_USERNAME)
-- E-Mail: ihre.email@example.com
+**soendi**
+- GitHub: [@soendi](https://github.com/soendi)
+- Repository: [GaubenMaster](https://github.com/soendi/GaubenMaster)
 
 ## 🙏 Danksagungen
 
 - [Matplotlib](https://matplotlib.org/) für die Visualisierung
 - [NumPy](https://numpy.org/) für numerische Berechnungen
 - [Tkinter](https://docs.python.org/3/library/tkinter.html) für die GUI
+- [NSIS](https://nsis.sourceforge.io/) für den Windows Installer
 
 ---
 

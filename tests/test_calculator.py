@@ -1,6 +1,6 @@
 """
-Tests für Triangle Calculator
-=============================
+Tests für GaubenMaster
+======================
 """
 
 import unittest
@@ -10,11 +10,11 @@ import os
 # Parent directory zum Pfad hinzufügen
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from TriangleCalculator.calculator import TriangleCalculator, get_triangle_properties
+from GaubenMaster.calculator import TriangleCalculator, get_triangle_properties
 
 
-class TestTriangleCalculator(unittest.TestCase):
-    """Testfälle für Dreiecksberechnungen."""
+class TestGaubenMasterCalculator(unittest.TestCase):
+    """Testfälle für Dreiecksberechnungen (GaubenMaster)."""
     
     def test_validate_triangle_valid(self):
         """Test gültige Dreiecke."""

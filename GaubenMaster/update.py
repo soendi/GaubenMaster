@@ -29,7 +29,7 @@ class VersionInfo:
 class UpdateManager:
     """Verwaltet automatische Updates der Anwendung."""
     
-    def __init__(self, repo_url: str = "https://github.com/IHR_USERNAME/TriangleCalculator",
+    def __init__(self, repo_url: str = "https://github.com/soendi/GaubenMaster",
                  current_version: str = "1.0.0",
                  version_file: str = "version.json",
                  check_interval_days: int = 7):
@@ -166,7 +166,7 @@ class UpdateManager:
         try:
             req = urllib.request.Request(url)
             req.add_header('Accept', 'application/vnd.github.v3+json')
-            req.add_header('User-Agent', 'TriangleCalculator-UpdateChecker')
+            req.add_header('User-Agent', 'GaubenMaster-UpdateChecker')
             
             with urllib.request.urlopen(req, timeout=10) as response:
                 data = json.loads(response.read().decode('utf-8'))
@@ -361,6 +361,6 @@ def create_update_manager(repo_url: str = None,
                          current_version: str = None) -> UpdateManager:
     """Factory-Funktion für UpdateManager."""
     return UpdateManager(
-        repo_url=repo_url or "https://github.com/IHR_USERNAME/TriangleCalculator",
+        repo_url=repo_url or "https://github.com/soendi/GaubenMaster",
         current_version=current_version or "1.0.0"
     )

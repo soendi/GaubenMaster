@@ -1,13 +1,13 @@
 """
-Triangle Calculator Package
-===========================
+GaubenMaster Package
+====================
 
-Ein Paket zur Berechnung und Visualisierung von Dreiecken.
+Ein Paket zur Berechnung und Visualisierung von Dreiecken für den Gaubenbau.
 """
 
 __version__ = "1.0.0"
-__author__ = "Ihr Name"
-__email__ = "ihre.email@example.com"
+__author__ = "soendi"
+__email__ = "soendi@users.noreply.github.com"
 __license__ = "MIT"
 
 from .calculator import TriangleCalculator
