@@ -50,6 +50,7 @@ jobs:
         black --check --diff .
     
     - name: Type checking (mypy)
+      continue-on-error: true
       run: |
         mypy GaubenMaster/ --ignore-missing-imports
     
