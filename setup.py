@@ -1,12 +1,14 @@
 from setuptools import setup, find_packages
 import os
-
-# Version aus version.json lesen
 import json
 
-with open("version.json", "r") as f:
-    version_data = json.load(f)
-    VERSION = version_data["version"]
+# Version aus version.json lesen
+VERSION = "1.0.0"
+version_path = os.path.join(os.path.dirname(__file__), "version.json")
+if os.path.exists(version_path):
+    with open(version_path, "r") as f:
+        version_data = json.load(f)
+        VERSION = version_data.get("version", "1.0.0")
 
 # README lesen
 with open("README.md", "r", encoding="utf-8") as f:
