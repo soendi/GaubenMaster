@@ -1,6 +1,6 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "Fix: Innenwinkel-Beschriftung korrigiert (alpha bei A, beta bei B, gamma bei C). Drehgeschwindigkeit reduziert. Höhen-Teilung: Einzelteile werden einzeln vermasst (Kantenlängen und Winkel), neue 'Einzelteile' UI mit Länge+, Falz vorne/hinten Feldern."
+  "changelog": "UI fix: heights and parts controls now side by side. Interior angle labels fixed. Einzelteile UI added with Länge+, Falz vorne/hinten fields. Height division now shows individual part measurements (edge lengths and angles)."
 }

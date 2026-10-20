@@ -245,10 +245,10 @@ class VisualizationPanel(ttk.LabelFrame):
         )
 
         # Container für die beiden nebeneinander stehenden Frames
-        controls_container = ttk.Frame(self)
-        controls_container.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
-        controls_container.columnconfigure(0, weight=1)
-        controls_container.columnconfigure(1, weight=1)
+        self.controls_container = ttk.Frame(self)
+        self.controls_container.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
+        self.controls_container.columnconfigure(0, weight=1)
+        self.controls_container.columnconfigure(1, weight=1)
 
         # Höhen-Teilung Controls (linke Hälfte)
         self._setup_height_division_controls()
@@ -267,7 +267,7 @@ class VisualizationPanel(ttk.LabelFrame):
     def _setup_height_division_controls(self):
         """Erstellt die UI für die Höhen-Teilung."""
         # Haupt-Container
-        controls_frame = ttk.LabelFrame(controls_container, text="Höhen-Teilung", padding="5")
+        controls_frame = ttk.LabelFrame(self.controls_container, text="Höhen-Teilung", padding="5")
         controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
         controls_frame.columnconfigure(1, weight=1)
 
