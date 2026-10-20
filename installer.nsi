@@ -17,7 +17,6 @@ ShowInstDetails show
 ShowUninstDetails show
 
 ; === Version ===
-!define PRODUCT_VERSION "1.0.0"
 !define PRODUCT_PUBLISHER "soendi"
 !define PRODUCT_WEB_SITE "https://github.com/soendi/GaubenMaster"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\GaubenMaster"
@@ -26,10 +25,10 @@ ShowUninstDetails show
 
 ; === MUI Settings ===
 !define MUI_ABORTWARNING
-!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
-!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
+!define MUI_ICON "assets/icon.ico"
+!define MUI_UNICON "assets/icon.ico"
 
-!define MUI_WELCOMEFINISHPAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Wizard\modern-wizard.bmp"
+; Kein Wizard-Bitmap (Datei nicht vorhanden) - Standard MUI verwenden
 !define MUI_WELCOMEPAGE_TITLE "Willkommen zum GaubenMaster Setup"
 !define MUI_WELCOMEPAGE_TEXT "Dieser Assistent installiert GaubenMaster ${PRODUCT_VERSION} auf Ihrem Computer.\n\nKlicken Sie auf Weiter, um fortzufahren."
 
@@ -79,7 +78,7 @@ Function SilentInstall
     SetOutPath $INSTDIR
     
     ; Dateien kopieren
-    File /r "dist\GaubenMaster\*"
+    File "dist\GaubenMaster.exe"
     
     ; Uninstaller erstellen
     WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -120,7 +119,7 @@ Section "MainSection" SEC01
     SetOutPath $INSTDIR
     
     ; Hauptprogramm
-    File /r "dist\GaubenMaster\*"
+    File "dist\GaubenMaster.exe"
     
     ; Uninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -176,12 +175,12 @@ Function un.onInit
     StrCmp $R1 "" NotSilentUninstall
     ; Silent Uninstall
     Push "Silent"
-    Call UninstallSilent
+    Call un.UninstallSilent
     Quit
 NotSilentUninstall:
 FunctionEnd
 
-Function UninstallSilent
+Function un.UninstallSilent
     Pop $R0
     ; Dateien löschen
     Delete "$INSTDIR\*.*"
