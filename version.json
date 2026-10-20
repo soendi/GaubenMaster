@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "release_date": "2026-10-20",
+  "version": "1.0.5",
+  "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "Erste öffentliche Version mit vollständiger Dreiecksberechnung und -visualisierung für den Gaubenbau"
+  "changelog": "Neue Funktion: Höhen-Teilung mit parallelen Linien (Dropdown für ha/hb/hc, Radiobuttons für n-Teile oder fixe Länge in cm, parallele Linien im rechten Winkel zur Höhe)"
 }
