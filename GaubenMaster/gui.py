@@ -225,7 +225,7 @@ class VisualizationPanel(ttk.LabelFrame):
         self.triangle_plot = None
         self._setup_ui()
         self.columnconfigure(0, weight=1)
-        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
 
     def _setup_ui(self):
         """Erstellt die UI."""
@@ -244,13 +244,141 @@ class VisualizationPanel(ttk.LabelFrame):
             side=tk.RIGHT, padx=5
         )
 
+        # Höhen-Teilung Controls
+        self._setup_height_division_controls()
+
         # Plot Frame
         plot_frame = ttk.Frame(self)
-        plot_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        plot_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         plot_frame.columnconfigure(0, weight=1)
         plot_frame.rowconfigure(0, weight=1)
 
         self.triangle_plot = TrianglePlot(plot_frame)
+
+    def _setup_height_division_controls(self):
+        """Erstellt die UI für die Höhen-Teilung."""
+        # Haupt-Container
+        controls_frame = ttk.LabelFrame(self, text="Höhen-Teilung", padding="5")
+        controls_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        controls_frame.columnconfigure(1, weight=1)
+
+        # Enable Checkbox
+        self.height_div_enabled = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            controls_frame,
+            text="Höhen-Teilung anzeigen",
+            variable=self.height_div_enabled,
+            command=self._on_height_div_toggle,
+        ).grid(row=0, column=0, columnspan=4, sticky=tk.W, pady=(0, 5))
+
+        # Höhen-Auswahl
+        ttk.Label(controls_frame, text="Höhe:").grid(row=1, column=0, sticky=tk.W, padx=(0, 5))
+        self.height_selection = tk.StringVar(value="ha")
+        height_combo = ttk.Combobox(
+            controls_frame,
+            textvariable=self.height_selection,
+            values=["ha (auf a)", "hb (auf b)", "hc (auf c)"],
+            state="readonly",
+            width=12,
+        )
+        height_combo.grid(row=1, column=1, sticky=tk.W, padx=(0, 10))
+        height_combo.bind("<<ComboboxSelected>>", self._on_height_div_change)
+
+        # Trennlinie
+        ttk.Separator(controls_frame, orient="vertical").grid(
+            row=1, column=2, sticky=(tk.N, tk.S), padx=10
+        )
+
+        # Modus: Radiobuttons
+        self.division_mode = tk.StringVar(value="equal_parts")
+
+        ttk.Radiobutton(
+            controls_frame,
+            text="In n Teile teilen:",
+            variable=self.division_mode,
+            value="equal_parts",
+            command=self._on_height_div_change,
+        ).grid(row=1, column=3, sticky=tk.W, padx=(10, 5))
+
+        self.n_parts_var = tk.IntVar(value=5)
+        ttk.Spinbox(
+            controls_frame,
+            from_=2,
+            to=20,
+            textvariable=self.n_parts_var,
+            width=5,
+            command=self._on_height_div_change,
+        ).grid(row=1, column=4, sticky=tk.W)
+
+        ttk.Radiobutton(
+            controls_frame,
+            text="Teile à n cm:",
+            variable=self.division_mode,
+            value="fixed_length",
+            command=self._on_height_div_change,
+        ).grid(row=2, column=3, sticky=tk.W, padx=(10, 5))
+
+        self.length_var = tk.DoubleVar(value=2.0)
+        ttk.Spinbox(
+            controls_frame,
+            from_=0.1,
+            to=50.0,
+            increment=0.1,
+            textvariable=self.length_var,
+            width=5,
+            command=self._on_height_div_change,
+        ).grid(row=2, column=4, sticky=tk.W)
+        ttk.Label(controls_frame, text="cm").grid(row=2, column=5, sticky=tk.W, padx=(2, 0))
+
+        # Initially disable controls
+        self._update_controls_state()
+
+    def _on_height_div_toggle(self):
+        """Handler für Enable-Checkbox."""
+        self._update_controls_state()
+        self._on_height_div_change()
+
+    def _on_height_div_change(self, event=None):
+        """Handler für Änderungen an den Höhen-Teilungs-Einstellungen."""
+        if not self.triangle_plot:
+            return
+
+        self.triangle_plot.height_division_enabled = self.height_div_enabled.get()
+
+        if not self.height_div_enabled.get():
+            self.triangle_plot.draw_triangle()
+            return
+
+        # Höhe auswählen
+        selection = self.height_selection.get()
+        if selection.startswith("ha"):
+            self.triangle_plot.height_division_selected = "ha"
+        elif selection.startswith("hb"):
+            self.triangle_plot.height_division_selected = "hb"
+        else:
+            self.triangle_plot.height_division_selected = "hc"
+
+        # Modus
+        self.triangle_plot.height_division_mode = self.division_mode.get()
+
+        if self.division_mode.get() == "equal_parts":
+            self.triangle_plot.height_division_n_parts = max(2, self.n_parts_var.get())
+        else:
+            self.triangle_plot.height_division_length = max(0.1, self.length_var.get())
+
+        self.triangle_plot.draw_triangle()
+
+    def _update_controls_state(self):
+        """Aktiviert/deaktiviert die Controls basierend auf Checkbox."""
+        state = "normal" if self.height_div_enabled.get() else "disabled"
+
+        # Find all child widgets and set state
+        for child in self.winfo_children():
+            if isinstance(child, ttk.LabelFrame) and "Höhen-Teilung" in child.cget("text"):
+                for widget in child.winfo_children():
+                    if isinstance(widget, (ttk.Combobox, ttk.Radiobutton, ttk.Spinbox)):
+                        if widget != child.winfo_children()[0]:  # Not the checkbox itself
+                            widget.configure(state=state)
 
     def set_triangle(self, a: float, b: float, c: float):
         """Setzt das anzuzeigende Dreieck."""

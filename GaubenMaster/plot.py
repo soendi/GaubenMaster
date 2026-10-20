@@ -45,6 +45,13 @@ class TrianglePlot:
         self.angles: Tuple[float, float, float] = (0, 0, 0)
         self.rotation_angle: float = 0.0
 
+        # Höhen-Teilungs Feature
+        self.height_division_enabled: bool = False
+        self.height_division_mode: str = "equal_parts"  # "equal_parts" oder "fixed_length"
+        self.height_division_selected: str = "ha"  # "ha", "hb", "hc"
+        self.height_division_n_parts: int = 5  # für equal_parts
+        self.height_division_length: float = 2.0  # für fixed_length (cm)
+
         # Maus-Interaktion State
         self.dragging: bool = False
         self.last_mouse_pos: Optional[Tuple[float, float]] = None
@@ -146,6 +153,9 @@ class TrianglePlot:
         self.draw_angle_arc(A, B, C, alpha, "α")
         self.draw_angle_arc(B, C, A, beta, "β")
         self.draw_angle_arc(C, A, B, gamma, "γ")
+
+        # Höhen-Teilung zeichnen
+        self._draw_height_divisions(A, B, C)
 
         # Achsen skalieren mit Margin
         self._auto_scale(A, B, C)
@@ -395,6 +405,218 @@ class TrianglePlot:
 
         self.ax.set_xlim(x_center - half_range, x_center + half_range)
         self.ax.set_ylim(y_center - half_range, y_center + half_range)
+
+    # --- Höhen-Teilungs Methoden ---
+
+    def _get_height_foot_and_line(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray, height_selection: str
+    ) -> Tuple[np.ndarray, np.ndarray, float]:
+        """
+        Berechnet den Fußpunkt der Höhe, den Höhenvektor und die Höhenlänge.
+
+        Args:
+            A, B, C: Dreiecksecken (nach Rotation)
+            height_selection: "ha", "hb" oder "hc"
+
+        Returns:
+            Tuple: (Fußpunkt, Höhenende (Ecke), Höhenlänge)
+        """
+        a, b, c = self.side_lengths
+
+        if height_selection == "ha":
+            # Höhe auf Seite a (BC), von Ecke A aus
+            foot = self._project_point_to_line(A, B, C)
+            height_vec = A - foot
+            height_len = np.linalg.norm(height_vec)
+            return foot, A, height_len
+        elif height_selection == "hb":
+            # Höhe auf Seite b (CA), von Ecke B aus
+            foot = self._project_point_to_line(B, C, A)
+            height_vec = B - foot
+            height_len = np.linalg.norm(height_vec)
+            return foot, B, height_len
+        else:  # "hc"
+            # Höhe auf Seite c (AB), von Ecke C aus
+            foot = self._project_point_to_line(C, A, B)
+            height_vec = C - foot
+            height_len = np.linalg.norm(height_vec)
+            return foot, C, height_len
+
+    def _project_point_to_line(self, P: np.ndarray, L1: np.ndarray, L2: np.ndarray) -> np.ndarray:
+        """Projiziert Punkt P auf die Linie durch L1 und L2."""
+        line_vec = L2 - L1
+        line_len_sq = np.dot(line_vec, line_vec)
+        if line_len_sq == 0:
+            return L1
+        t = np.dot(P - L1, line_vec) / line_len_sq
+        return L1 + t * line_vec
+
+    def _calculate_division_points(
+        self, foot: np.ndarray, vertex: np.ndarray, height_len: float
+    ) -> List[float]:
+        """
+        Berechnet die Teilungspunkte entlang der Höhe (Abstand vom Fußpunkt).
+
+        Returns:
+            Liste der Abstände vom Fußpunkt entlang der Höhe
+        """
+        if self.height_division_mode == "equal_parts":
+            n = max(1, self.height_division_n_parts)
+            return [height_len * i / n for i in range(1, n)]  # ohne 0 und height_len
+        else:  # fixed_length
+            length = max(0.1, self.height_division_length)
+            points = []
+            d = length
+            while d < height_len - 1e-9:
+                points.append(d)
+                d += length
+            return points
+
+    def _draw_height_divisions(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
+    ):
+        """Zeichnet die Höhen-Teilungslinien."""
+        if not self.height_division_enabled:
+            return
+
+        foot, vertex, height_len = self._get_height_foot_and_line(
+            A, B, C, self.height_division_selected
+        )
+
+        if height_len < 1e-9:
+            return
+
+        # Höhe zeichnen (gestrichelt)
+        self.ax.plot(
+            [foot[0], vertex[0]],
+            [foot[1], vertex[1]],
+            "g--",
+            linewidth=1.5,
+            alpha=0.7,
+            zorder=3,
+            label=f"Höhe {self.height_division_selected.upper()}",
+        )
+
+        # Fußpunkt markieren
+        self.ax.plot(
+            foot[0],
+            foot[1],
+            "go",
+            markersize=8,
+            markerfacecolor="green",
+            markeredgecolor="darkgreen",
+            markeredgewidth=1.5,
+            zorder=4,
+        )
+
+        # Beschriftung am Fußpunkt
+        self.ax.text(
+            foot[0],
+            foot[1],
+            f"F{self.height_division_selected.upper()}",
+            fontsize=9,
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+            color="darkgreen",
+            zorder=5,
+            bbox=dict(
+                boxstyle="circle,pad=0.2", facecolor="white", edgecolor="darkgreen", alpha=0.9
+            ),
+        )
+
+        # Höhenlänge beschriften
+        mid_height = (foot + vertex) / 2
+        self.ax.text(
+            mid_height[0],
+            mid_height[1],
+            f"{self.height_division_selected.upper()} = {height_len:.1f} cm",
+            fontsize=9,
+            ha="center",
+            va="center",
+            fontweight="bold",
+            color="green",
+            zorder=5,
+            bbox=dict(
+                boxstyle="round,pad=0.2", facecolor="white", edgecolor="green", alpha=0.9
+            ),
+        )
+
+        # Teilungspunkte berechnen und zeichnen
+        division_distances = self._calculate_division_points(foot, vertex, height_len)
+
+        # Höhen-Vektor normieren
+        height_vec = vertex - foot
+        height_dir = height_vec / height_len if height_len > 0 else np.array([0.0, 0.0])
+
+        # Perpendikuläre Richtung (90° links)
+        perp_dir = np.array([-height_dir[1], height_dir[0]])
+
+        # Ausdehnung der Perpendikulären (für visuelle Linieneinzeichnung)
+        # Wir zeichnen von der Höhe weg, senkrecht zur Höhe
+        perp_length = max(
+            np.linalg.norm(B - A), np.linalg.norm(C - B), np.linalg.norm(A - C)
+        ) * 0.15
+
+        for i, dist in enumerate(division_distances):
+            point_on_height = foot + height_dir * dist
+
+            # Perpendikuläre Linie zeichnen (in beide Richtungen)
+            line_start = point_on_height - perp_dir * perp_length
+            line_end = point_on_height + perp_dir * perp_length
+
+            self.ax.plot(
+                [line_start[0], line_end[0]],
+                [line_start[1], line_end[1]],
+                "g-",
+                linewidth=1,
+                alpha=0.8,
+                zorder=3,
+            )
+
+            # Beschriftung der Teilung
+            label_pos = point_on_height + perp_dir * perp_length * 1.1
+            if self.height_division_mode == "equal_parts":
+                label = f"{i+1}/{self.height_division_n_parts}"
+            else:
+                label = f"{dist:.1f} cm"
+            self.ax.text(
+                label_pos[0],
+                label_pos[1],
+                label,
+                fontsize=8,
+                ha="center",
+                va="center",
+                color="darkgreen",
+                fontweight="bold",
+                zorder=5,
+                bbox=dict(
+                    boxstyle="round,pad=0.15",
+                    facecolor="white",
+                    edgecolor="green",
+                    alpha=0.9,
+                ),
+            )
+
+        # Legende für Teilung
+        if self.height_division_mode == "equal_parts":
+            legend_text = f"Gleichmäßig in {self.height_division_n_parts} Teile"
+        else:
+            legend_text = f"Teile à {self.height_division_length:.1f} cm"
+        self.ax.text(
+            0.02,
+            0.98,
+            f"Höhe {self.height_division_selected.upper()}: {legend_text}",
+            transform=self.ax.transAxes,
+            fontsize=9,
+            va="top",
+            ha="left",
+            color="darkgreen",
+            fontweight="bold",
+            bbox=dict(
+                boxstyle="round,pad=0.3", facecolor="lightgreen", edgecolor="green", alpha=0.8
+            ),
+        )
 
     # --- Event Handler ---
 
