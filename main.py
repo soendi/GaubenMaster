@@ -224,7 +224,7 @@ class GaubenMasterApp:
                 else:
                     self.root.after(0, lambda: self.status_bar.set_status("Update-Download fehlgeschlagen"))
             except Exception as e:
-                self.root.after(0, lambda: self.status_bar.set_status(f"Update-Fehler: {e}"))
+                self.root.after(0, lambda err=e: self.status_bar.set_status(f"Update-Fehler: {err}"))
         
         threading.Thread(target=download_and_install, daemon=True).start()
     
