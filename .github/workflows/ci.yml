@@ -105,7 +105,7 @@ jobs:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published' && secrets.PYPI_API_TOKEN != ''
     environment: pypi
     permissions:
       id-token: write
@@ -172,16 +172,20 @@ jobs:
         nsis-version: '3.09'
     
     - name: Build NSIS Installer
+      continue-on-error: true
       run: |
         makensis /DPRODUCT_VERSION="${{ steps.version.outputs.version }}" installer.nsi
       shell: cmd
     
     - name: Rename installer with version
+      continue-on-error: true
       run: |
         $version = "${{ steps.version.outputs.version }}"
         $installer = "GaubenMaster-Setup-$version.exe"
-        Move-Item "GaubenMaster-Setup-${{ steps.version.outputs.version }}.exe" $installer
-        echo "installer=$installer" >> $env:GITHUB_OUTPUT
+        if (Test-Path "GaubenMaster-Setup-${{ steps.version.outputs.version }}.exe") {
+          Move-Item "GaubenMaster-Setup-${{ steps.version.outputs.version }}.exe" $installer
+          echo "installer=$installer" >> $env:GITHUB_OUTPUT
+        }
       id: installer
       shell: pwsh
     
@@ -233,7 +237,7 @@ jobs:
     name: Build Docker Image
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published' && secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
     
     steps:
     - name: Checkout repository
