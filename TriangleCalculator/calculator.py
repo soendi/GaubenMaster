@@ -113,8 +113,13 @@ class TriangleCalculator:
         Bereitet die Koordinaten der Dreiecksecken vor.
         Platziert Seite c auf der x-Achse von (0,0) nach (c,0).
         
+        Convention:
+        - Seite a = BC (gegenüber Ecke A)
+        - Seite b = CA (gegenüber Ecke B) 
+        - Seite c = AB (gegenüber Ecke C, liegt auf x-Achse)
+        
         Args:
-            a, b, c: Seitenlängen (c liegt auf x-Achse)
+            a, b, c: Seitenlängen
             
         Returns:
             Tuple (A, B, C) als numpy-Arrays mit [x, y] Koordinaten
@@ -122,19 +127,20 @@ class TriangleCalculator:
         if not TriangleCalculator.validate_triangle(a, b, c):
             raise ValueError("Ungültige Dreiecksseiten für Koordinatenberechnung")
         
-        # Kosinussatz für Winkel gamma (bei Ecke C, gegenüber Seite c)
-        cos_gamma = (a**2 + b**2 - c**2) / (2 * a * b)
-        cos_gamma = max(-1.0, min(1.0, cos_gamma))
-        gamma = math.acos(cos_gamma)
+        # Koordinaten berechnen:
+        # A = (0, 0)
+        # B = (c, 0)
+        # C = (x, y) mit:
+        #   x = (b² + c² - a²) / (2c)  (Projektion von b auf c)
+        #   y = √(b² - x²)
         
-        # Höhe von C auf Seite c
-        h = b * math.sin(gamma)
-        # Projektion von b auf c
-        proj = b * math.cos(gamma)
+        x = (b**2 + c**2 - a**2) / (2 * c)
+        y_squared = b**2 - x**2
+        y = math.sqrt(max(0.0, y_squared))  # Clamping für numerische Stabilität
         
         A = np.array([0.0, 0.0], dtype=float)
         B = np.array([c, 0.0], dtype=float)
-        C = np.array([proj, h], dtype=float)
+        C = np.array([x, y], dtype=float)
         
         return A, B, C
     
