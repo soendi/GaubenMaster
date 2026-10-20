@@ -16,6 +16,6 @@ from .update import UpdateManager
 
 __all__ = [
     "TriangleCalculator",
-    "TrianglePlot", 
+    "TrianglePlot",
     "UpdateManager",
 ]

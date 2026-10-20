@@ -3,17 +3,20 @@ import os
 
 # Version aus version.json lesen
 import json
-with open('version.json', 'r') as f:
+
+with open("version.json", "r") as f:
     version_data = json.load(f)
-    VERSION = version_data['version']
+    VERSION = version_data["version"]
 
 # README lesen
-with open('README.md', 'r', encoding='utf-8') as f:
+with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 # Requirements lesen
-with open('requirements.txt', 'r') as f:
-    requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+with open("requirements.txt", "r") as f:
+    requirements = [
+        line.strip() for line in f if line.strip() and not line.startswith("#")
+    ]
 
 setup(
     name="gaubenmaster",
