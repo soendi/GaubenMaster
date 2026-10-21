@@ -62,6 +62,10 @@ class TrianglePlot:
 
         # Einzelteile-Daten für die UI
         self.einzelteile_data: List[dict] = []
+        self.einzelteile_artists: List[dict] = (
+            []
+        )  # Artists pro Einzelteil für Hover-Highlighting
+        self.hovered_einzelteil_index: Optional[int] = None
 
         # Event-Handler registrieren
         self._connect_events()
@@ -76,6 +80,7 @@ class TrianglePlot:
         self.canvas.mpl_connect("motion_notify_event", self.on_motion)
         self.canvas.mpl_connect("scroll_event", self.on_scroll)
         self.canvas.mpl_connect("resize_event", self.on_resize)
+        self.canvas.mpl_connect("pick_event", self.on_pick)
 
     def setup_plot(self):
         """Initialisiert den Plot mit Grundeinstellungen."""
@@ -496,8 +501,10 @@ class TrianglePlot:
 
     def _draw_height_divisions(self, A: np.ndarray, B: np.ndarray, C: np.ndarray):
         """Zeichnet die Höhen-Teilungslinien und misst die Einzelteile."""
-        # Einzelteile-Daten zurücksetzen
+        # Einzelteile-Daten und Artists zurücksetzen
         self.einzelteile_data = []
+        self.einzelteile_artists = []
+        self.hovered_einzelteil_index = None
 
         if not self.height_division_enabled:
             return
@@ -660,14 +667,19 @@ class TrianglePlot:
                         line_start_left,
                     ]
                 )
-                self.ax.fill(
+                # Fill mit picking aktivieren
+                fill_artist = self.ax.fill(
                     poly_points[:, 0],
                     poly_points[:, 1],
                     alpha=0.1,
                     color="lightgreen",
                     zorder=2,
-                )
-                self.ax.plot(
+                    picker=True,
+                    pickradius=5,
+                )[0]
+                fill_artist._einzelteil_index = i  # Für Pick-Event
+                # Outline
+                (outline_artist,) = self.ax.plot(
                     poly_points[:, 0],
                     poly_points[:, 1],
                     "g-",
@@ -675,6 +687,9 @@ class TrianglePlot:
                     alpha=0.8,
                     zorder=3,
                 )
+
+                # Sammle alle Text-Artists für dieses Einzelteil (für Hover-Highlighting)
+                text_artists = []
 
                 # Daten für UI sammeln
                 kanten = {
@@ -741,7 +756,7 @@ class TrianglePlot:
                         )
                         * 0.03
                     )
-                    self.ax.text(
+                    text_1 = self.ax.text(
                         label_pos_1[0],
                         label_pos_1[1],
                         f"{edge_len_1:.1f} cm",
@@ -758,6 +773,7 @@ class TrianglePlot:
                             alpha=0.95,
                         ),
                     )
+                    text_artists.append(text_1)
 
                 # Kante 2: line_start_right -> line_end_right (rechte Seite)
                 edge_len_2 = np.linalg.norm(line_end_right - line_start_right)
@@ -775,7 +791,7 @@ class TrianglePlot:
                         )
                         * 0.03
                     )
-                    self.ax.text(
+                    text_2 = self.ax.text(
                         label_pos_2[0],
                         label_pos_2[1],
                         f"{edge_len_2:.1f} cm",
@@ -792,6 +808,7 @@ class TrianglePlot:
                             alpha=0.95,
                         ),
                     )
+                    text_artists.append(text_2)
 
                 # Kante 3: line_end_right -> line_end_left (unten/oben)
                 edge_len_3 = np.linalg.norm(line_end_left - line_end_right)
@@ -809,7 +826,7 @@ class TrianglePlot:
                         )
                         * 0.03
                     )
-                    self.ax.text(
+                    text_3 = self.ax.text(
                         label_pos_3[0],
                         label_pos_3[1],
                         f"{edge_len_3:.1f} cm",
@@ -826,6 +843,7 @@ class TrianglePlot:
                             alpha=0.95,
                         ),
                     )
+                    text_artists.append(text_3)
 
                 # Kante 4: line_end_left -> line_start_left (linke Seite)
                 edge_len_4 = np.linalg.norm(line_start_left - line_end_left)
@@ -843,7 +861,7 @@ class TrianglePlot:
                         )
                         * 0.03
                     )
-                    self.ax.text(
+                    text_4 = self.ax.text(
                         label_pos_4[0],
                         label_pos_4[1],
                         f"{edge_len_4:.1f} cm",
@@ -860,13 +878,14 @@ class TrianglePlot:
                             alpha=0.95,
                         ),
                     )
+                    text_artists.append(text_4)
 
                 # Winkel des Einzelteils an den Ecken berechnen und anzeigen
                 # Ecke 1: line_start_left
                 angle_1 = self._calculate_corner_angle(
                     line_end_left, line_start_left, line_start_right
                 )
-                self.ax.text(
+                text_a1 = self.ax.text(
                     line_start_left[0],
                     line_start_left[1],
                     f"∠={angle_1:.1f}°",
@@ -883,11 +902,12 @@ class TrianglePlot:
                         alpha=0.9,
                     ),
                 )
+                text_artists.append(text_a1)
                 # Ecke 2: line_start_right
                 angle_2 = self._calculate_corner_angle(
                     line_start_left, line_start_right, line_end_right
                 )
-                self.ax.text(
+                text_a2 = self.ax.text(
                     line_start_right[0],
                     line_start_right[1],
                     f"∠={angle_2:.1f}°",
@@ -904,11 +924,12 @@ class TrianglePlot:
                         alpha=0.9,
                     ),
                 )
+                text_artists.append(text_a2)
                 # Ecke 3: line_end_right
                 angle_3 = self._calculate_corner_angle(
                     line_start_right, line_end_right, line_end_left
                 )
-                self.ax.text(
+                text_a3 = self.ax.text(
                     line_end_right[0],
                     line_end_right[1],
                     f"∠={angle_3:.1f}°",
@@ -925,11 +946,12 @@ class TrianglePlot:
                         alpha=0.9,
                     ),
                 )
+                text_artists.append(text_a3)
                 # Ecke 4: line_end_left
                 angle_4 = self._calculate_corner_angle(
                     line_end_right, line_end_left, line_start_left
                 )
-                self.ax.text(
+                text_a4 = self.ax.text(
                     line_end_left[0],
                     line_end_left[1],
                     f"∠={angle_4:.1f}°",
@@ -945,6 +967,16 @@ class TrianglePlot:
                         edgecolor="green",
                         alpha=0.9,
                     ),
+                )
+                text_artists.append(text_a4)
+
+                # Alle Artists für dieses Einzelteil speichern (für Hover-Highlighting)
+                self.einzelteile_artists.append(
+                    {
+                        "fill": fill_artist,
+                        "outline": outline_artist,
+                        "texts": text_artists,
+                    }
                 )
 
         # Höhen-Teilungspunkte auf der Höhe markieren und beschriften
@@ -1069,6 +1101,73 @@ class TrianglePlot:
             self.rotation_angle %= 360
             self.draw_triangle()
             self.last_mouse_pos = (event.xdata, event.ydata)
+
+        # Hover-Check: Wenn nicht gedragged wird, prüfen ob Maus über Einzelteil
+        elif (
+            not self.dragging
+            and event.inaxes == self.ax
+            and event.xdata is not None
+            and event.ydata is not None
+        ):
+            self._check_hover(event.xdata, event.ydata)
+
+    def _check_hover(self, x: float, y: float):
+        """Prüft ob Maus über einem Einzelteil ist und aktualisiert Hover-State."""
+        # Einfache Bounding-Box-Prüfung für jedes Einzelteil
+        hovered_idx = None
+        for idx, artists in enumerate(self.einzelteile_artists):
+            fill = artists["fill"]
+            if fill and fill.contains((x, y))[0]:
+                hovered_idx = idx
+                break
+
+        if hovered_idx != self.hovered_einzelteil_index:
+            self.hovered_einzelteil_index = hovered_idx
+            self._update_einzelteile_alpha()
+            self.canvas.draw_idle()
+
+    def on_pick(self, event):
+        """Pick-Event-Handler: Highlight gehovertes Einzelteil, fade andere aus."""
+        # Nur auf Fill-Artists der Einzelteile reagieren
+        artist = event.artist
+        if not hasattr(artist, "_einzelteil_index"):
+            return
+
+        hovered_idx = artist._einzelteil_index
+
+        if hovered_idx == self.hovered_einzelteil_index:
+            return  # Schon das gleiche, nichts tun
+
+        self.hovered_einzelteil_index = hovered_idx
+        self._update_einzelteile_alpha()
+        self.canvas.draw_idle()
+
+    def _update_einzelteile_alpha(self):
+        """Aktualisiert Alpha-Werte aller Einzelteile basierend auf Hover-State."""
+        for idx, artists in enumerate(self.einzelteile_artists):
+            is_hovered = idx == self.hovered_einzelteil_index
+            alpha = 1.0 if is_hovered else 0.5
+
+            # Fill alpha
+            fill = artists["fill"]
+            if fill:
+                fill.set_alpha(0.1 * alpha)  # Base alpha 0.1
+
+            # Outline alpha
+            outline = artists["outline"]
+            if outline:
+                outline.set_alpha(0.8 * alpha)
+
+            # Text labels alpha
+            for text in artists["texts"]:
+                if text:
+                    text.set_alpha(alpha)
+                    # Auch bbox alpha anpassen
+                    bbox = text.get_bbox_patch()
+                    if bbox:
+                        bbox.set_alpha(
+                            0.95 * alpha if "cm" in text.get_text() else 0.9 * alpha
+                        )
 
     def on_scroll(self, event):
         """Mausrad-Handler: Zoom."""
