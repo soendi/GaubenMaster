@@ -5,7 +5,7 @@ GaubenMaster Package
 Ein Paket zur Berechnung und Visualisierung von Dreiecken für den Gaubenbau.
 """
 
-__version__ = "1.2.5"
+__version__ = "1.2.6"
 __author__ = "soendi"
 __email__ = "soendi@users.noreply.github.com"
 __license__ = "MIT"
