@@ -231,7 +231,7 @@ class VisualizationPanel(ttk.LabelFrame):
         """Erstellt die UI."""
         # Toolbar
         toolbar = ttk.Frame(self)
-        toolbar.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
+        toolbar.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 5))
 
         ttk.Label(
             toolbar,
@@ -244,11 +244,12 @@ class VisualizationPanel(ttk.LabelFrame):
             side=tk.RIGHT, padx=5
         )
 
-        # Container für die beiden nebeneinander stehenden Frames
+        # Container für Controls (links) und Einzelteile-Liste (rechts)
         self.controls_container = ttk.Frame(self)
         self.controls_container.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
         self.controls_container.columnconfigure(0, weight=1)
         self.controls_container.columnconfigure(1, weight=1)
+        self.controls_container.rowconfigure(0, weight=1)  # Gleich hohe Frames
 
         # Höhen-Teilung Controls (linke Hälfte)
         self._setup_height_division_controls()
@@ -256,13 +257,38 @@ class VisualizationPanel(ttk.LabelFrame):
         # Einzelteile Controls (rechte Hälfte)
         self._setup_einzelteile_controls()
 
-        # Plot Frame
-        plot_frame = ttk.Frame(self)
-        plot_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
-        plot_frame.columnconfigure(0, weight=1)
-        plot_frame.rowconfigure(0, weight=1)
+        # Plot Frame (linker Bereich) und Einzelteile-Display (rechter Bereich)
+        self.plot_frame = ttk.Frame(self)
+        self.plot_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.plot_frame.columnconfigure(0, weight=1)
+        self.plot_frame.rowconfigure(0, weight=1)
 
-        self.triangle_plot = TrianglePlot(plot_frame)
+        self.einzelteile_frame = ttk.Frame(self)
+        self.einzelteile_frame.grid(row=2, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
+        self.einzelteile_frame.columnconfigure(0, weight=1)
+        self.einzelteile_frame.rowconfigure(0, weight=1)
+
+        # Einzelteile Display (Canvas mit Scrollbar)
+        self.einzelteile_canvas = tk.Canvas(self.einzelteile_frame, bg="white")
+        self.einzelteile_scrollbar = ttk.Scrollbar(self.einzelteile_frame, orient="vertical", command=self.einzelteile_canvas.yview)
+        self.einzelteile_scrollable_frame = ttk.Frame(self.einzelteile_canvas)
+        self.einzelteile_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.einzelteile_canvas.configure(scrollregion=self.einzelteile_canvas.bbox("all"))
+        )
+        self.einzelteile_canvas.create_window((0, 0), window=self.einzelteile_scrollable_frame, anchor="nw")
+        self.einzelteile_canvas.configure(yscrollcommand=self.einzelteile_scrollbar.set)
+        self.einzelteile_canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.einzelteile_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        self.einzelteile_visible = False
+
+        self.triangle_plot = TrianglePlot(self.plot_frame)
+        
+        # Grid-Konfiguration für das Hauptfenster
+        self.columnconfigure(0, weight=3)  # Plot bekommt mehr Platz
+        self.columnconfigure(1, weight=1)  # Einzelteile weniger Platz
+        self.rowconfigure(2, weight=1)
 
     def _setup_height_division_controls(self):
         """Erstellt die UI für die Höhen-Teilung."""
@@ -392,6 +418,17 @@ class VisualizationPanel(ttk.LabelFrame):
         """Handler für Enable-Checkbox."""
         self._update_controls_state()
         self._on_height_div_change()
+        
+        # Einzelteile-Frame ein-/ausblenden
+        if self.height_div_enabled.get() and self.triangle_plot and self.triangle_plot.height_division_enabled:
+            self._update_einzelteile_display()
+            if not self.einzelteile_visible:
+                self.einzelteile_frame.grid()
+                self.einzelteile_visible = True
+        else:
+            if self.einzelteile_visible:
+                self.einzelteile_frame.grid_remove()
+                self.einzelteile_visible = False
 
     def _on_height_div_change(self, event=None):
         """Handler für Änderungen an den Höhen-Teilungs-Einstellungen."""
@@ -422,6 +459,10 @@ class VisualizationPanel(ttk.LabelFrame):
             self.triangle_plot.height_division_length = max(0.1, self.length_var.get())
 
         self.triangle_plot.draw_triangle()
+        
+        # Einzelteile-Display aktualisieren
+        if self.height_div_enabled.get():
+            self._update_einzelteile_display()
 
     def _update_controls_state(self):
         """Aktiviert/deaktiviert die Controls basierend auf Checkbox."""
@@ -434,6 +475,64 @@ class VisualizationPanel(ttk.LabelFrame):
                     if isinstance(widget, (ttk.Combobox, ttk.Radiobutton, ttk.Spinbox)):
                         if widget != child.winfo_children()[0]:  # Not the checkbox itself
                             widget.configure(state=state)
+
+    def _update_einzelteile_display(self):
+        """Aktualisiert die Einzelteile-Anzeige rechts."""
+        if not self.triangle_plot or not self.triangle_plot.einzelteile_data:
+            return
+
+        # Alte Widgets löschen
+        for widget in self.einzelteile_scrollable_frame.winfo_children():
+            widget.destroy()
+
+        # Daten aus dem Plot holen
+        data = self.triangle_plot.einzelteile_data
+        
+        # Titel
+        ttk.Label(
+            self.einzelteile_scrollable_frame,
+            text="Einzelteile",
+            font=("Arial", 11, "bold")
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky=tk.W)
+
+        # Jedes Einzelteil anzeigen
+        for i, teil in enumerate(data):
+            row_offset = i * 6 + 1
+            
+            # Teil-Header
+            ttk.Label(
+                self.einzelteile_scrollable_frame,
+                text=f"Teil {i+1}",
+                font=("Arial", 10, "bold")
+            ).grid(row=row_offset, column=0, columnspan=2, pady=(10, 5), sticky=tk.W)
+            
+            # Kantenlängen
+            if 'kanten' in teil:
+                for j, (label, length) in enumerate(teil['kanten'].items()):
+                    ttk.Label(
+                        self.einzelteile_scrollable_frame,
+                        text=f"{label}: {length:.1f} cm"
+                    ).grid(row=row_offset + 1 + j, column=0, sticky=tk.W, padx=(10, 0))
+            
+            # Winkel
+            if 'winkel' in teil:
+                for j, (label, angle) in enumerate(teil['winkel'].items()):
+                    ttk.Label(
+                        self.einzelteile_scrollable_frame,
+                        text=f"{label}: {angle:.1f}°"
+                    ).grid(row=row_offset + 1 + j, column=1, sticky=tk.W, padx=(10, 0))
+            
+            # Fläche
+            if 'flaeche' in teil:
+                ttk.Label(
+                    self.einzelteile_scrollable_frame,
+                    text=f"Fläche: {teil['flaeche']:.2f} cm²",
+                    font=("Arial", 9, "bold")
+                ).grid(row=row_offset + 5, column=0, columnspan=2, pady=(5, 0), sticky=tk.W)
+
+        # Canvas-Scrollregion aktualisieren
+        self.einzelteile_scrollable_frame.update_idletasks()
+        self.einzelteile_canvas.configure(scrollregion=self.einzelteile_canvas.bbox("all"))
 
     def set_triangle(self, a: float, b: float, c: float):
         """Setzt das anzuzeigende Dreieck."""

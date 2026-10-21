@@ -1,6 +1,6 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "UI fix: heights and parts controls now side by side. Interior angle labels fixed. Einzelteile UI added with Länge+, Falz vorne/hinten fields. Height division now shows individual part measurements (edge lengths and angles)."
+  "changelog": "Fix: scipy hidden imports added for PyInstaller. Height division draws immediately. Angle labels inside arc. Green division lines. Individual parts measured with edge lengths and angles along lines. Einzelteile UI with length+, falz fields."
 }

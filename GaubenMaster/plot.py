@@ -1,6 +1,6 @@
 """
 Dreiecksvisualisierungs-Modul
-=============================
+===========================
 
 Matplotlib-basierte Visualisierung mit Maus-Interaktion.
 """
@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import tkinter as tk
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
+from scipy.spatial import ConvexHull
 
 
 class TrianglePlot:
@@ -56,6 +57,9 @@ class TrianglePlot:
         self.dragging: bool = False
         self.last_mouse_pos: Optional[Tuple[float, float]] = None
         self.zoom_factor: float = 1.0
+
+        # Einzelteile-Daten für die UI
+        self.einzelteile_data: List[dict] = []
 
         # Event-Handler registrieren
         self._connect_events()
@@ -317,14 +321,14 @@ class TrianglePlot:
         arc_y = p2[1] + radius * np.sin(theta)
         self.ax.plot(arc_x, arc_y, "r-", linewidth=2, zorder=4)
 
-        # Winkelbeschriftung in der Mitte des Bogens
+        # Winkelbeschriftung in der Mitte des Bogens (innerhalb des Winkels)
         mid_angle = (start_ang + end_ang) / 2
         # Korrektur für wrap-around bei mid_angle
         if end_ang < start_ang:
             mid_angle = (start_ang + end_ang + 2*math.pi) / 2
             if mid_angle > math.pi:
                 mid_angle -= 2*math.pi
-        label_radius = radius * 1.6
+        label_radius = radius * 0.6  # Innerhalb des Winkels (nicht außen)
         label_x = p2[0] + label_radius * math.cos(mid_angle)
         label_y = p2[1] + label_radius * math.sin(mid_angle)
 
@@ -490,6 +494,9 @@ class TrianglePlot:
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray
     ):
         """Zeichnet die Höhen-Teilungslinien und misst die Einzelteile."""
+        # Einzelteile-Daten zurücksetzen
+        self.einzelteile_data = []
+        
         if not self.height_division_enabled:
             return
 
@@ -635,12 +642,41 @@ class TrianglePlot:
                 poly_points = np.array([line_start_left, line_start_right, line_end_right, line_end_left, line_start_left])
                 self.ax.fill(
                     poly_points[:, 0], poly_points[:, 1],
-                    alpha=0.1, color="lightblue", zorder=2
+                    alpha=0.1, color="lightgreen", zorder=2
                 )
                 self.ax.plot(
                     poly_points[:, 0], poly_points[:, 1],
-                    "b-", linewidth=1.5, alpha=0.8, zorder=3
+                    "g-", linewidth=1.5, alpha=0.8, zorder=3
                 )
+
+                # Daten für UI sammeln
+                kanten = {
+                    "oben": float(np.linalg.norm(line_start_right - line_start_left)),
+                    "rechts": float(np.linalg.norm(line_end_right - line_start_right)),
+                    "unten": float(np.linalg.norm(line_end_left - line_end_right)),
+                    "links": float(np.linalg.norm(line_start_left - line_end_left)),
+                }
+                winkel = {
+                    "oben-links": float(self._calculate_corner_angle(line_end_left, line_start_left, line_start_right)),
+                    "oben-rechts": float(self._calculate_corner_angle(line_start_left, line_start_right, line_end_right)),
+                    "unten-rechts": float(self._calculate_corner_angle(line_start_right, line_end_right, line_end_left)),
+                    "unten-links": float(self._calculate_corner_angle(line_end_right, line_end_left, line_start_left)),
+                }
+                # Fläche des Einzelteils (Polygon-Fläche)
+                from scipy.spatial import ConvexHull
+                try:
+                    hull = ConvexHull(poly_points)
+                    flaeche = float(hull.volume)  # 2D volume = Fläche
+                except:
+                    flaeche = 0.0
+                
+                self.einzelteile_data.append({
+                    "index": i,
+                    "kanten": kanten,
+                    "winkel": winkel,
+                    "flaeche": flaeche,
+                    "hoehe": float(segment_height),
+                })
 
                 # Einzelteil-Längen an den Kanten beschriften
                 # Kante 1: line_start_left -> line_start_right (oben/unten)
@@ -653,8 +689,8 @@ class TrianglePlot:
                     self.ax.text(
                         label_pos_1[0], label_pos_1[1],
                         f"{edge_len_1:.1f} cm", fontsize=8, ha="center", va="center",
-                        color="blue", fontweight="bold", zorder=5,
-                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                        color="darkgreen", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="green", alpha=0.95)
                     )
 
                 # Kante 2: line_start_right -> line_end_right (rechte Seite)
@@ -667,8 +703,8 @@ class TrianglePlot:
                     self.ax.text(
                         label_pos_2[0], label_pos_2[1],
                         f"{edge_len_2:.1f} cm", fontsize=8, ha="center", va="center",
-                        color="blue", fontweight="bold", zorder=5,
-                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                        color="darkgreen", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="green", alpha=0.95)
                     )
 
                 # Kante 3: line_end_right -> line_end_left (unten/oben)
@@ -681,8 +717,8 @@ class TrianglePlot:
                     self.ax.text(
                         label_pos_3[0], label_pos_3[1],
                         f"{edge_len_3:.1f} cm", fontsize=8, ha="center", va="center",
-                        color="blue", fontweight="bold", zorder=5,
-                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                        color="darkgreen", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="green", alpha=0.95)
                     )
 
                 # Kante 4: line_end_left -> line_start_left (linke Seite)
@@ -695,8 +731,8 @@ class TrianglePlot:
                     self.ax.text(
                         label_pos_4[0], label_pos_4[1],
                         f"{edge_len_4:.1f} cm", fontsize=8, ha="center", va="center",
-                        color="blue", fontweight="bold", zorder=5,
-                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="blue", alpha=0.95)
+                        color="darkgreen", fontweight="bold", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="green", alpha=0.95)
                     )
 
                 # Winkel des Einzelteils an den Ecken berechnen und anzeigen
@@ -705,32 +741,32 @@ class TrianglePlot:
                 self.ax.text(
                     line_start_left[0], line_start_left[1],
                     f"∠={angle_1:.1f}°", fontsize=7, ha="center", va="center",
-                    color="darkblue", fontweight="bold", zorder=5,
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                    color="darkgreen", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="green", alpha=0.9)
                 )
                 # Ecke 2: line_start_right
                 angle_2 = self._calculate_corner_angle(line_start_left, line_start_right, line_end_right)
                 self.ax.text(
                     line_start_right[0], line_start_right[1],
                     f"∠={angle_2:.1f}°", fontsize=7, ha="center", va="center",
-                    color="darkblue", fontweight="bold", zorder=5,
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                    color="darkgreen", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="green", alpha=0.9)
                 )
                 # Ecke 3: line_end_right
                 angle_3 = self._calculate_corner_angle(line_start_right, line_end_right, line_end_left)
                 self.ax.text(
                     line_end_right[0], line_end_right[1],
                     f"∠={angle_3:.1f}°", fontsize=7, ha="center", va="center",
-                    color="darkblue", fontweight="bold", zorder=5,
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                    color="darkgreen", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="green", alpha=0.9)
                 )
                 # Ecke 4: line_end_left
                 angle_4 = self._calculate_corner_angle(line_end_right, line_end_left, line_start_left)
                 self.ax.text(
                     line_end_left[0], line_end_left[1],
                     f"∠={angle_4:.1f}°", fontsize=7, ha="center", va="center",
-                    color="darkblue", fontweight="bold", zorder=5,
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="blue", alpha=0.9)
+                    color="darkgreen", fontweight="bold", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="green", alpha=0.9)
                 )
 
         # Höhen-Teilungspunkte auf der Höhe markieren und beschriften
