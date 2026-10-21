@@ -231,7 +231,7 @@ class VisualizationPanel(ttk.LabelFrame):
         """Erstellt die UI."""
         # Toolbar
         toolbar = ttk.Frame(self)
-        toolbar.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 5))
+        toolbar.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
 
         ttk.Label(
             toolbar,
@@ -244,25 +244,27 @@ class VisualizationPanel(ttk.LabelFrame):
             side=tk.RIGHT, padx=5
         )
 
-        # Container für Controls (links) und Einzelteile-Liste (rechts)
+        # Container für Controls (links) und Einzelteile-Display (rechts)
         self.controls_container = ttk.Frame(self)
         self.controls_container.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
-        self.controls_container.columnconfigure(0, weight=1)
-        self.controls_container.columnconfigure(1, weight=1)
-        self.controls_container.rowconfigure(0, weight=1)  # Gleich hohe Frames
+        self.controls_container.columnconfigure(0, weight=49)  # 49% Breite
+        self.controls_container.columnconfigure(1, weight=49)  # 49% Breite
+        self.controls_container.columnconfigure(2, weight=2)   # 2% Abstand
+        self.controls_container.rowconfigure(0, weight=1)      # Gleich hohe Frames
 
-        # Höhen-Teilung Controls (linke Hälfte)
+        # Höhen-Teilung Controls (linke Seite, 49%)
         self._setup_height_division_controls()
 
-        # Einzelteile Controls (rechte Hälfte)
+        # Einzelteile Controls (rechte Seite, 49%)
         self._setup_einzelteile_controls()
 
-        # Plot Frame (linker Bereich) und Einzelteile-Display (rechter Bereich)
+        # Plot Frame (linker Bereich)
         self.plot_frame = ttk.Frame(self)
         self.plot_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.plot_frame.columnconfigure(0, weight=1)
         self.plot_frame.rowconfigure(0, weight=1)
 
+        # Einzelteile-Display (rechter Bereich)
         self.einzelteile_frame = ttk.Frame(self)
         self.einzelteile_frame.grid(row=2, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
         self.einzelteile_frame.columnconfigure(0, weight=1)
@@ -286,16 +288,23 @@ class VisualizationPanel(ttk.LabelFrame):
         self.triangle_plot = TrianglePlot(self.plot_frame)
         
         # Grid-Konfiguration für das Hauptfenster
-        self.columnconfigure(0, weight=3)  # Plot bekommt mehr Platz
-        self.columnconfigure(1, weight=1)  # Einzelteile weniger Platz
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
+        
+        # Einzelteile-Frame initial ausblenden
+        self.einzelteile_frame.grid_remove()
+        self.einzelteile_visible = False
 
     def _setup_height_division_controls(self):
         """Erstellt die UI für die Höhen-Teilung."""
         # Haupt-Container
         controls_frame = ttk.LabelFrame(self.controls_container, text="Höhen-Teilung", padding="5")
-        controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
+        controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5), pady=5)
         controls_frame.columnconfigure(1, weight=1)
+        controls_frame.rowconfigure(0, weight=1)
+        controls_frame.rowconfigure(1, weight=1)
+        controls_frame.rowconfigure(2, weight=1)
 
         # Enable Checkbox
         self.height_div_enabled = tk.BooleanVar(value=False)
@@ -371,9 +380,12 @@ class VisualizationPanel(ttk.LabelFrame):
     def _setup_einzelteile_controls(self):
         """Erstellt die UI für die Einzelteile-Einstellungen."""
         # Haupt-Container
-        controls_frame = ttk.LabelFrame(self, text="Einzelteile", padding="5")
-        controls_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
+        controls_frame = ttk.LabelFrame(self.controls_container, text="Einzelteile", padding="5")
+        controls_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=5)
         controls_frame.columnconfigure(1, weight=1)
+        controls_frame.rowconfigure(0, weight=1)
+        controls_frame.rowconfigure(1, weight=1)
+        controls_frame.rowconfigure(2, weight=1)
 
         # Länge +
         ttk.Label(controls_frame, text="Länge +:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
