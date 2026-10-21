@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "Major release: Grid dynamic 98%, version sync, installer build fix, all fixes"
+  "changelog": "Hover highlighting for Einzelteile: non-hovered parts fade to 50% alpha"
 }
