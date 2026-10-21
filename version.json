@@ -1,6 +1,6 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.20",
   "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "Fix: scipy hidden imports added for PyInstaller. Height division draws immediately. Angle labels inside arc. Green division lines. Individual parts measured with edge lengths and angles along lines. Einzelteile UI with length+, falz fields."
+  "changelog": "Grid dynamic 98% sizing, version sync, installer build fix"
 }

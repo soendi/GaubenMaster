@@ -14,6 +14,8 @@ build/
 dist/
 *.egg-info/
 *.egg
+*.exe
+GaubenMaster-Setup-*.exe
 
 # Installer logs
 pip-log.txt
