@@ -33,7 +33,7 @@ class UpdateManager:
     def __init__(
         self,
         repo_url: str = "https://github.com/soendi/GaubenMaster",
-        current_version: str = "1.0.0",
+        current_version: str = "1.2.0",
         version_file: str = "version.json",
         check_interval_days: int = 7,
     ):
