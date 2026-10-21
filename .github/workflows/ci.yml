@@ -207,13 +207,15 @@ jobs:
     permissions:
       contents: write
     
-    steps:
+    - name: Extract version without v
+      id: version_no_v
+      run: echo "version=${{ github.event.release.tag_name }}" | sed 's/^v//' >> $GITHUB_OUTPUT
     - name: Download Windows artifacts
       uses: actions/download-artifact@v4
       with:
-        name: GaubenMaster-windows-${{ github.event.release.tag_name }}
+        name: GaubenMaster-windows-${{ steps.version_no_v.outputs.version }}
         path: release-assets/
-    
+
     - name: Download PyPI package artifacts
       uses: actions/download-artifact@v4
       with:
