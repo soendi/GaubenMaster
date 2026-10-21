@@ -1,6 +1,6 @@
 {
-  "version": "1.2.6",
+  "version": "1.2.7",
   "release_date": "2026-10-21",
   "product_name": "GaubenMaster",
-  "changelog": "Fix YAML syntax: add missing steps keyword"
+  "changelog": "Fix artifact names: add v prefix to upload to match download"
 }
