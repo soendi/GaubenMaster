@@ -1,0 +1,5 @@
+include version.json
+include LICENSE
+include README.md
+include requirements.txt
+recursive-include GaubenMaster *.py
